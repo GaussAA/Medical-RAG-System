@@ -103,6 +103,8 @@ class ModelsConfig(BaseModel):
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     reranker: RerankerConfig = Field(default_factory=RerankerConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
+    # Safety margin in MB reserved for GPU allocation overhead
+    gpu_safety_margin_mb: int = 500
 
 
 class ChunkingConfig(BaseModel):

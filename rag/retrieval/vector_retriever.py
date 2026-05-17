@@ -74,15 +74,19 @@ class VectorRetriever(BaseRetriever):
 
     def load_embedding_to_gpu(self) -> bool:
         """Load embedding model to GPU."""
-        from app.core.gpu_memory_manager import get_gpu_memory_status
+        from app.core.gpu_memory_manager import GPUMemoryManager, get_gpu_memory_status
 
         if self._embedding_on_gpu:
             return True
 
         _ = self.embedding_model
 
+        settings = get_settings()
+        safety_margin_mb = settings.models.gpu_safety_margin_mb
+        safety_margin_gb = safety_margin_mb / 1024
+
         status = get_gpu_memory_status()
-        usable_gb = status.free_gb - 0.5  # 500MB safety margin
+        usable_gb = status.free_gb - safety_margin_gb
         required_gb = self._embedding_memory_mb / 1024
 
         logger.debug(
@@ -99,6 +103,9 @@ class VectorRetriever(BaseRetriever):
 
         self._embedding_model.to("cuda")
         self._embedding_on_gpu = True
+
+        gpu_manager = GPUMemoryManager.get_instance()
+        gpu_manager.register_model("embedding", self._embedding_memory_mb)
 
         logger.info(f"Embedding model loaded to GPU ({self._embedding_memory_mb}MB)")
         return True

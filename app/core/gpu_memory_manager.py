@@ -83,14 +83,9 @@ class GPUMemoryManager:
         allocated = torch.cuda.memory_allocated(0) / (1024**2)
         reserved = torch.cuda.memory_reserved(0) / (1024**2)
 
-        # 使用 mem_get_info 获取真正的空闲显存（不包括缓存）
-        # 因为 reserved 包含 PyTorch 缓存，这些可以被释放
-        try:
-            free_bytes, _ = torch.cuda.mem_get_info()
-            true_free_mb = free_bytes / (1024**2)
-        except Exception:
-            # Fallback to calculation if mem_get_info fails
-            true_free_mb = total - reserved
+        # Use total - reserved as the definition of "free" memory
+        # This excludes PyTorch cached memory for consistency with get_gpu_memory_status()
+        true_free_mb = total - reserved
 
         return {
             "available": True,
@@ -133,8 +128,9 @@ class GPUMemoryManager:
 
         available_for_new = info["free_mb"]
 
-        # 预留 500MB 安全余量
-        safe_margin = 500
+        from config.settings import get_settings
+
+        safe_margin = get_settings().models.gpu_safety_margin_mb
         usable = available_for_new - safe_margin
 
         return usable >= required_mb
