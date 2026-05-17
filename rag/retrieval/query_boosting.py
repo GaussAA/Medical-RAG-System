@@ -2,6 +2,7 @@ import re
 from typing import Any
 
 from app.models.schemas import RetrievedNode
+from config.settings import get_settings
 
 
 class QueryBoosting:
@@ -37,7 +38,7 @@ class QueryBoosting:
         self, results: list[RetrievedNode], target_type: str
     ) -> list[RetrievedNode]:
         """Boost scores for chunks matching target content type."""
-        boost_factor = 1.3
+        boost_factor = get_settings().rag.retrieval.boost_factor
         boosted = []
         for node in results:
             content_type = node.metadata.get("content_type", "text")

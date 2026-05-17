@@ -124,6 +124,7 @@ class RetrievalConfig(BaseModel):
     weights: dict[str, float] = {"vector": 0.6, "bm25": 0.4}
     final_top_k: int = 5
     similarity_threshold: float = 0.5
+    boost_factor: float = 1.3
 
 
 class CitationVerificationConfig(BaseModel):
