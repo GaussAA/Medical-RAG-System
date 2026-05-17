@@ -3,7 +3,6 @@
 
 import asyncio
 import json
-import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -11,7 +10,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from rag.evaluation.evaluator import RAGEvaluator, EvalGroundTruth
+from rag.evaluation import RetrievalEvaluator
+from rag.evaluation.benchmark_runner import BenchmarkRunner, BenchmarkConfig
 
 
 app = typer.Typer(help="Medical RAG Evaluation CLI")
@@ -24,29 +24,29 @@ def evaluate(
     expected: str,
     retrieved_doc_ids: Annotated[str | None, typer.Option(help="Comma-separated doc IDs")] = None,
 ) -> None:
-    """Run single query evaluation."""
+    """Run single query evaluation.
+
+    This performs retrieval-only evaluation since generation and medical safety
+    evaluation require a full QueryResponse from the RAG engine.
+    """
     async def _run() -> None:
-        evaluator = RAGEvaluator()
-
-        # Build ground truth from expected answer
-        ground_truth = EvalGroundTruth(
-            query_id="cli-eval",
-            reference_answer=expected,
-        )
-
-        # Mock response for evaluation - in CLI mode we evaluate retrieval against expected
-        # Note: Full evaluation requires a real QueryResponse from RAG engine
-        console.print("[yellow]Note: Single eval requires RAG engine integration[/yellow]")
         console.print(f"[bold]Query:[/bold] {query}")
         console.print(f"[bold]Expected:[/bold] {expected}")
 
-        # For CLI, we primarily validate the retrieval component
-        if retrieved_doc_ids:
-            doc_ids = [d.strip() for d in retrieved_doc_ids.split(",")]
-            from rag.evaluation.retrieval_eval import RetrievalEvaluator
-            ret_eval = RetrievalEvaluator(k_values=[5, 10, 20])
+        if not retrieved_doc_ids:
+            console.print("[yellow]No retrieved_doc_ids provided. Only validation possible.[/yellow]")
+            return
+
+        doc_ids = [d.strip() for d in retrieved_doc_ids.split(",")]
+        ret_eval = RetrievalEvaluator(k_values=[5, 10, 20])
+
+        if doc_ids:
             metrics = ret_eval.evaluate_without_ground_truth(doc_ids, min_relevant=1)
+            console.print(f"[bold]Retrieved Documents:[/bold] {len(doc_ids)}")
             console.print(f"[bold]Hit Rate:[/bold] {metrics['hit_rate']:.4f}")
+            console.print(f"[bold]Retrieval Count:[/bold] {metrics['retrieved_count']}")
+        else:
+            console.print("[yellow]No retrieved document IDs provided[/yellow]")
 
     asyncio.run(_run())
 
@@ -65,29 +65,41 @@ def benchmark(
         "relevant_doc_ids": ["doc1", "doc2"],
         "retrieved_doc_ids": ["doc1", "doc3"]
     }
+
+    Note: This performs retrieval-only evaluation. Full RAG evaluation with
+    generation and medical safety metrics requires integration with the RAG engine.
+    Use BenchmarkRunner for comprehensive evaluation.
     """
     async def _run() -> None:
-        evaluator = RAGEvaluator()
+        # Initialize BenchmarkRunner for proper benchmark execution
+        runner = BenchmarkRunner(config=BenchmarkConfig(
+            dataset_path=str(dataset),
+            output_dir=str(output.parent) if output else "data/evaluation/reports",
+        ))
 
+        # Load JSONL data
         with open(dataset) as f:
-            data = [json.loads(line) for line in f]
+            lines = f.read().splitlines()
 
+        queries_data = []
+        for line in lines:
+            if line.strip():
+                item = json.loads(line)
+                queries_data.append({
+                    "query_id": item.get("query_id", f"bench-{len(queries_data)}"),
+                    "query_text": item["query"],
+                    "relevant_doc_ids": item.get("relevant_doc_ids", []),
+                    "retrieved_doc_ids": item.get("retrieved_doc_ids", []),
+                    "expected_answer": item.get("expected_answer", ""),
+                })
+
+        ret_eval = RetrievalEvaluator(k_values=[5, 10, 20])
         results = []
-        for item in data:
-            query = item["query"]
-            expected = item.get("expected_answer", "")
+
+        for item in queries_data:
+            query = item["query_text"]
             relevant_ids = item.get("relevant_doc_ids", [])
             retrieved_ids = item.get("retrieved_doc_ids", [])
-
-            ground_truth = EvalGroundTruth(
-                query_id=item.get("query_id", f"bench-{len(results)}"),
-                reference_answer=expected,
-                relevant_doc_ids=relevant_ids,
-            )
-
-            # Run retrieval evaluation
-            from rag.evaluation.retrieval_eval import RetrievalEvaluator
-            ret_eval = RetrievalEvaluator(k_values=[5, 10, 20])
 
             if relevant_ids and retrieved_ids:
                 metrics = ret_eval.evaluate(
@@ -101,7 +113,7 @@ def benchmark(
 
             results.append({
                 "query": query,
-                "query_id": ground_truth.query_id,
+                "query_id": item["query_id"],
                 "retrieval_score": retrieval_score,
                 "hit_rate": metrics.hit_rate if hasattr(metrics, "hit_rate") else metrics.get("hit_rate", 0),
                 "mrr": metrics.mrr if hasattr(metrics, "mrr") else 0,
