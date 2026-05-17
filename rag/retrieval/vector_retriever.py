@@ -74,28 +74,26 @@ class VectorRetriever(BaseRetriever):
 
     def load_embedding_to_gpu(self) -> bool:
         """Load embedding model to GPU."""
-        from app.core.gpu_memory_manager import GPUMemoryManager
-
-        gpu_manager = GPUMemoryManager.get_instance()
+        from app.core.gpu_memory_manager import get_gpu_memory_status
 
         if self._embedding_on_gpu:
             return True
 
         _ = self.embedding_model
 
-        # 只调用一次 get_memory_info，避免二次调用导致不同结果
-        info = gpu_manager.get_memory_info()
-        usable = info["free_mb"] - 500  # 500MB 安全余量
+        status = get_gpu_memory_status()
+        usable_gb = status.free_gb - 0.5  # 500MB safety margin
+        required_gb = self._embedding_memory_mb / 1024
 
         logger.debug(
-            f"GPU memory check for embedding: required={self._embedding_memory_mb}MB, "
-            f"free={info['free_mb']}MB, usable={usable}MB"
+            f"GPU memory check for embedding: required={required_gb:.2f}GB, "
+            f"free={status.free_gb:.2f}GB, usable={usable_gb:.2f}GB"
         )
 
-        if usable < self._embedding_memory_mb:
+        if usable_gb < required_gb:
             logger.warning(
                 f"GPU memory insufficient for embedding: "
-                f"required={self._embedding_memory_mb}MB, usable={usable}MB"
+                f"required={required_gb:.2f}GB, usable={usable_gb:.2f}GB"
             )
             return False
 
@@ -167,19 +165,16 @@ class VectorRetriever(BaseRetriever):
         import asyncio
         import uuid as uuid_lib
 
-        # Separate nodes with pre-encoded embeddings from those needing encoding
+        # Process nodes - encode any that don't have pre-encoded embeddings
         nodes_to_encode = []
-        nodes_pre_encoded = []
         for node in nodes:
-            if node.metadata.get("embedding"):
-                nodes_pre_encoded.append(node)
-            else:
+            if not node.metadata.get("embedding"):
                 nodes_to_encode.append(node)
 
         # Batch encode only the nodes that need embeddings
         if nodes_to_encode:
             texts = [node.content for node in nodes_to_encode]
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             embeddings = await loop.run_in_executor(
                 None, self._encode_batch, texts
             )
