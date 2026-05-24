@@ -23,8 +23,8 @@ class PostgreSQLConfig(BaseModel):
     host: str = "localhost"
     port: int = 5432
     database: str = "medical_rag"
-    username: str = "postgres_admin"
-    password: str = "postgres_123"
+    username: str = ""  # Override via POSTGRES_USER env var
+    password: str = ""  # Override via POSTGRES_PASSWORD env var - NEVER leave empty in production
     pool_size: int = 10
     max_overflow: int = 20
 
@@ -182,7 +182,7 @@ class CorsConfig(BaseModel):
     allow_origins: list[str] = ["http://localhost:8501", "http://localhost:3000"]
     allow_credentials: bool = True
     allow_methods: list[str] = ["GET", "POST", "PUT", "DELETE"]
-    allow_headers: list[str] = ["*"]
+    allow_headers: list[str] = ["Authorization", "Content-Type", "X-Request-ID", "X-Trace-ID"]
 
 
 class StreamlitConfig(BaseModel):

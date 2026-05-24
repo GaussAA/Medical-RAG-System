@@ -6,7 +6,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from app.models.schemas import RetrievedNode
 from config.settings import get_settings
 from rag.generation.prompt_builder import PromptBuilder
-from rag.generation.citation_extractor import CitationExtractor
+from app.services.citation_verifier import CitationVerifier
 
 
 class LLMGenerator:
@@ -39,6 +39,7 @@ class LLMGenerator:
             LLMGenerator._client = AsyncOpenAI(
                 api_key=self.api_key,
                 base_url=self.api_base,
+                timeout=120.0,
             )
             LLMGenerator._client_config = config_key
 
@@ -63,21 +64,12 @@ class LLMGenerator:
             user_prompt=user_prompt,
         )
 
-        answer = response.choices[0].message.content
+        answer = response.choices[0].message.content or ""
 
-        context_dicts = [
-            {
-                "content": ctx.content,
-                "source": ctx.metadata.get("source_file", "未知来源"),
-                "page": ctx.metadata.get("page_number"),
-                "node_id": ctx.node_id,
-                "score": ctx.score,
-            }
-            for ctx in contexts
-        ]
         citations = []
         if include_citations:
-            citations = CitationExtractor().extract(context_dicts)
+            verifier = CitationVerifier()
+            citations = verifier.extract_and_verify(answer, contexts)
 
         return {
             "answer": answer,
@@ -106,6 +98,7 @@ class LLMGenerator:
             temperature=self.temperature,
             max_tokens=self.max_tokens,
             stream=True,
+            timeout=120.0,
         )
 
         async for chunk in stream:

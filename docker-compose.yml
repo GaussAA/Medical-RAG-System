@@ -1,0 +1,59 @@
+services:
+  # ========== PostgreSQL 关系型数据库 ==========
+  postgres:
+    image: postgres:18-alpine
+    container_name: local_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres_admin
+      POSTGRES_PASSWORD: postgres_123
+      POSTGRES_DB: medical_rag
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/database/postgres_data:/var/lib/postgresql # 已适配 PG18 新版路径
+    networks:
+      - database_net
+
+  # ========== Qdrant 向量数据库 ==========
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: local_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./data/database/qdrant_storage:/qdrant/storage
+    networks:
+      - database_net
+
+  # ========== Redis 缓存数据库 ==========
+  redis:
+    image: redis:8.6.3-alpine
+    container_name: local_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/database/redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - database_net
+
+  # ========== WhoDB 数据库管理工具 ==========
+  whodb:
+    image: clidey/whodb:latest
+    container_name: local_whodb
+    restart: unless-stopped
+    environment:
+      - LMSTUDIO_BASE_URL=http://host.docker.internal:1234/v1
+      - LMSTUDIO_MODELS=google/gemma-4-e4b
+    ports:
+      - "8081:8080" # Web 界面
+    networks:
+      - database_net
+
+networks:
+  database_net:
+    driver: bridge

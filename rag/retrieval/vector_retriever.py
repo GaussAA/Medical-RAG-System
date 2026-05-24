@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from loguru import logger
@@ -63,9 +64,9 @@ class VectorRetriever(BaseRetriever):
 
             settings = get_settings()
             embedding_model_name = settings.models.embedding.name
-            device = "cpu"
+            device = settings.models.embedding.device
             self._embedding_model = SentenceTransformer(embedding_model_name, device=device)
-            self._embedding_on_gpu = False
+            self._embedding_on_gpu = device == "cuda"
         return self._embedding_model
 
     def _encode_batch(self, texts: list[str]) -> list[list[float]]:
@@ -139,7 +140,10 @@ class VectorRetriever(BaseRetriever):
         self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None
     ) -> list[RetrievedNode]:
         try:
-            query_vector = self.embedding_model.encode(query).tolist()
+            loop = asyncio.get_running_loop()
+            query_vector = await loop.run_in_executor(
+                None, lambda: self.embedding_model.encode(query).tolist()
+            )
 
             search_filter = self._build_filter(filters) if filters else None
 

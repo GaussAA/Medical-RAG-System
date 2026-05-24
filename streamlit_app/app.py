@@ -38,7 +38,6 @@ with st.sidebar:
         "📚 文档管理": "pages/documents.py",
         "📊 历史记录": "pages/history.py",
         "📈 评估中心": "pages/evaluation.py",
-        "💬 聊天（新页面）": "pages/chat.py",
     }
 
     for label, page_path in pages.items():

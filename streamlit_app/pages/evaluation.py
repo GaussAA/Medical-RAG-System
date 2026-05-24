@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import json
 import requests
 import streamlit as st
 
@@ -33,18 +34,13 @@ def render_retrieval_metrics(retrieval: dict):
     """Render retrieval metrics."""
     st.markdown("#### 检索指标")
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("MRR", f"{retrieval.get('mrr', 0):.2%}")
-    col2.metric("命中率", f"{retrieval.get('hit_rate', 0):.2%}")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("命中率", f"{retrieval.get('hit_rate', 0):.2%}")
+    col2.metric("MRR@10", f"{retrieval.get('mrr', 0):.2%}")
 
-    p_at_k = retrieval.get("precision_at_k", {})
-    r_at_k = retrieval.get("recall_at_k", {})
-    n_at_k = retrieval.get("ndcg_at_k", {})
-
-    if 10 in p_at_k:
-        col3.metric("P@10", f"{p_at_k[10]:.2%}")
-    if 10 in n_at_k:
-        col4.metric("NDCG@10", f"{n_at_k[10]:.2%}")
+    ndcg_at_k = retrieval.get("ndcg_at_k", {})
+    if 10 in ndcg_at_k:
+        col3.metric("NDCG@10", f"{ndcg_at_k[10]:.2%}")
 
 
 def render_generation_metrics(generation: dict):
@@ -178,12 +174,21 @@ def run_single_evaluation():
 
 def run_benchmark():
     """Form to run benchmark tests."""
+    import json  # Local import for json parsing
+
     st.markdown("### 基准测试")
 
+    # JSONL format for dataset
+    st.caption("数据集格式：JSONL，每行包含 query, expected_answer, relevant_doc_ids 字段")
+
     with st.form("benchmark_form"):
-        dataset_path = st.text_input(
+        dataset_path = st.text_area(
             "数据集路径",
-            placeholder="/path/to/evaluation_dataset.json",
+            placeholder="""/path/to/evaluation_dataset.jsonl
+格式示例（每行JSON）：
+{"query": "糖尿病诊断标准", "expected_answer": "...", "relevant_doc_ids": ["doc1"]}
+{"query": "高血压用药", "expected_answer": "...", "relevant_doc_ids": ["doc2"]}""",
+            height=120,
         )
         limit = st.number_input("限制数量", min_value=1, max_value=1000, value=50)
 
@@ -191,19 +196,45 @@ def run_benchmark():
         if submitted and dataset_path:
             with st.spinner("基准测试运行中..."):
                 try:
+                    # Parse JSONL data from the path/content
+                    if dataset_path.strip().startswith("{"):
+                        # It's JSONL content, not a path
+                        lines = dataset_path.strip().split("\n")
+                        dataset = [json.loads(line) for line in lines if line.strip()]
+                    else:
+                        # It's a file path, read the file
+                        # Security: validate path is within allowed data directory
+                        from pathlib import Path
+                        safe_base = Path(__file__).parent.parent.parent / "data"
+                        requested_path = Path(dataset_path.strip()).resolve()
+                        try:
+                            requested_path.relative_to(safe_base.resolve())
+                        except ValueError:
+                            st.error("路径不允许：只能在 data/ 目录下读取文件")
+                            return
+                        with open(requested_path) as f:
+                            dataset = [json.loads(line) for line in f if line.strip()]
+
+                    dataset = dataset[:limit]  # Apply limit
+
                     response = requests.post(
                         f"{API_BASE}/evaluation/benchmark",
-                        json={"dataset_path": dataset_path, "limit": limit},
-                        timeout=300,
+                        json={"dataset": dataset},
+                        timeout=600,
                     )
 
                     if response.status_code == 200:
-                        results = response.json()
+                        data = response.json()
+                        results = data.get("results", [])
                         st.success(f"基准测试完成，共 {len(results)} 条评估")
                         render_benchmark_results(results)
                     else:
                         st.error(f"基准测试失败: {response.status_code}")
 
+                except json.JSONDecodeError as e:
+                    st.error(f"数据集格式错误: {str(e)}")
+                except FileNotFoundError:
+                    st.error(f"文件不存在: {dataset_path}")
                 except Exception as e:
                     st.error(f"基准测试出错: {str(e)}")
 
@@ -215,7 +246,8 @@ def view_history():
     try:
         response = requests.get(f"{API_BASE}/evaluation/history", timeout=10)
         if response.status_code == 200:
-            history = response.json()
+            data = response.json()
+            history = data.get("history", [])
 
             if not history:
                 st.info("暂无评估历史")

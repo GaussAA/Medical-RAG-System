@@ -1,0 +1,102 @@
+[
+  {
+    "query_id": "med_001",
+    "query_text": "糖尿病患者如何选择降糖药物？",
+    "query_type": "drug",
+    "relevant_doc_ids": ["doc_diabetes_001", "doc_diabetes_002"],
+    "expected_keywords": ["二甲双胍", "血糖监测", "并发症", "剂量"],
+    "reference_answer": "糖尿病患者首选二甲双胍作为降糖药物...",
+    "difficulty": "medium",
+    "safety_sensitive": true
+  },
+  {
+    "query_id": "med_002",
+    "query_text": "高血压的诊断标准是什么？",
+    "query_type": "diagnosis",
+    "relevant_doc_ids": ["doc_hypertension_001"],
+    "expected_keywords": ["血压", "收缩压", "舒张压", "诊断标准"],
+    "reference_answer": "高血压诊断标准为收缩压≥140mmHg或舒张压≥90mmHg...",
+    "difficulty": "easy",
+    "safety_sensitive": true
+  },
+  {
+    "query_id": "med_003",
+    "query_text": "哪些药物可能导致肝损伤？",
+    "query_type": "drug",
+    "relevant_doc_ids": ["doc_drug_safety_001", "doc_drug_safety_002"],
+    "expected_keywords": ["肝损伤", "药物", "转氨酶", "不良反应"],
+    "reference_answer": "可能导致肝损伤的药物包括对乙酰氨基酚...",
+    "difficulty": "medium",
+    "safety_sensitive": true
+  },
+  {
+    "query_id": "med_004",
+    "query_text": "急性心肌梗死的急救流程是什么？",
+    "query_type": "procedure",
+    "relevant_doc_ids": ["doc_cardiology_001"],
+    "expected_keywords": ["胸痛", "心电图", "硝酸甘油", "急救"],
+    "reference_answer": "急性心肌梗死急救流程包括立即卧床、吸氧、心电监护...",
+    "difficulty": "hard",
+    "safety_sensitive": true
+  },
+  {
+    "query_id": "med_005",
+    "query_text": "儿童发热时如何正确使用退热药物？",
+    "query_type": "drug",
+    "relevant_doc_ids": ["doc_pediatrics_001"],
+    "expected_keywords": ["体温", "退热药", "对乙酰氨基酚", "布洛芬", "剂量"],
+    "reference_answer": "儿童发热使用退热药物应根据体重计算剂量...",
+    "difficulty": "medium",
+    "safety_sensitive": true
+  },
+  {
+    "query_id": "med_006",
+    "query_text": "如何预防深静脉血栓形成？",
+    "query_type": "prevention",
+    "relevant_doc_ids": ["doc_vascular_001"],
+    "expected_keywords": ["血栓", "抗凝", "活动", "预防"],
+    "reference_answer": "深静脉血栓预防包括早期活动、气压治疗、抗凝药物...",
+    "difficulty": "medium",
+    "safety_sensitive": false
+  },
+  {
+    "query_id": "med_007",
+    "query_text": "糖尿病患者的饮食管理有哪些注意事项？",
+    "query_type": "lifestyle",
+    "relevant_doc_ids": ["doc_diabetes_003"],
+    "expected_keywords": ["饮食", "碳水化合物", "血糖", "控制"],
+    "reference_answer": "糖尿病患者饮食管理应控制碳水化合物摄入...",
+    "difficulty": "easy",
+    "safety_sensitive": false
+  },
+  {
+    "query_id": "med_008",
+    "query_text": "甲状腺功能检查需要做哪些项目？",
+    "query_type": "procedure",
+    "relevant_doc_ids": ["doc_endocrine_001"],
+    "expected_keywords": ["TSH", "T3", "T4", "甲状腺"],
+    "reference_answer": "甲状腺功能检查主要包括TSH、T3、T4...",
+    "difficulty": "easy",
+    "safety_sensitive": false
+  },
+  {
+    "query_id": "med_009",
+    "query_text": "胃溃疡患者应如何进行药物治疗？",
+    "query_type": "drug",
+    "relevant_doc_ids": ["doc_gi_001"],
+    "expected_keywords": ["质子泵抑制剂", "胃溃疡", "幽门螺杆菌", "疗程"],
+    "reference_answer": "胃溃疡药物治疗包括质子泵抑制剂和根除幽门螺杆菌治疗...",
+    "difficulty": "medium",
+    "safety_sensitive": true
+  },
+  {
+    "query_id": "med_010",
+    "query_text": "慢性阻塞性肺疾病（COPD）稳定期如何管理？",
+    "query_type": "treatment",
+    "relevant_doc_ids": ["doc_respiratory_001"],
+    "expected_keywords": ["COPD", "支气管扩张剂", "吸入糖皮质激素", "氧疗"],
+    "reference_answer": "COPD稳定期管理包括支气管扩张剂、吸入糖皮质激素...",
+    "difficulty": "hard",
+    "safety_sensitive": false
+  }
+]

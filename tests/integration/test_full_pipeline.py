@@ -4,25 +4,25 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import AsyncClient, ASGITransport
 
 from app.main import create_app
-from app.models.schemas import QueryResponse, Citation, RiskWarning
+from app.models.schemas import QueryResponse, Citation, RiskWarning, ConversationSession, Message
 
 
 @pytest.fixture
 def mock_app_state():
     """Create a mock app state with required services."""
     mock_session_manager = MagicMock()
-    mock_session_manager.create_session_db = AsyncMock(return_value=MagicMock(
+    mock_session_manager.create_session_db = AsyncMock(return_value=ConversationSession(
         session_id="test-session-id",
         session_title=None,
         messages=[],
         is_active=True,
     ))
-    mock_session_manager.add_message = AsyncMock(return_value=MagicMock(
+    mock_session_manager.add_message = AsyncMock(return_value=Message(
         message_id="test-message-id",
         role="user",
         content="test",
     ))
-    mock_session_manager.get_session = MagicMock(return_value=MagicMock(
+    mock_session_manager.get_session = MagicMock(return_value=ConversationSession(
         session_id="test-session-id",
         messages=[],
         is_active=True,
@@ -47,6 +47,7 @@ async def client(mock_app_state):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+    # Explicit cleanup of patches - patches are auto-cleaned via context manager
 
 
 @pytest.mark.asyncio

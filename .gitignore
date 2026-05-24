@@ -1,0 +1,43 @@
+# Python
+.venv/
+venv/
+.uv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Test & Coverage
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage*
+coverage.json
+coverage.xml
+htmlcov/
+
+# Secrets & Configuration
+.env
+
+# Project Data
+data/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Tool Cache
+.claude/
+.omc/
+

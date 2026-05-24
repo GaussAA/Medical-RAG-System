@@ -1,3 +1,4 @@
+import asyncio
 import time
 from contextvars import ContextVar
 from typing import Any, AsyncGenerator
@@ -48,8 +49,7 @@ class RAGEngine:
         1. 检测 reranker 是否在 GPU，如果是则迁移到 CPU
         2. 加载 embedding 到 GPU
         3. 执行向量化
-        4. 迁移 embedding 到 CPU（保留模型对象）
-        5. 恢复 reranker 到 GPU
+        4. 迁移 embedding 到 CPU（保留模型对象，warm 状态）
 
         Args:
             nodes: 要处理的文档节点列表
@@ -61,14 +61,12 @@ class RAGEngine:
 
         GPUMemoryManager.get_instance()
         vector_retriever = self.hybrid_retriever.vector_retriever
-        reranker_was_on_gpu = False
 
         try:
             # Step 1: 如果 reranker 在 GPU，先迁移到 CPU
             if self.reranker.is_on_gpu():
                 logger.info("Moving reranker to CPU to free GPU memory")
                 self.reranker.move_to_cpu()
-                reranker_was_on_gpu = True
 
             # Step 2: 加载 embedding 到 GPU
             if not vector_retriever.load_embedding_to_gpu():
@@ -80,13 +78,9 @@ class RAGEngine:
             # 向量化在 VectorRetriever.add() 中自动使用 embedding_model
             await self.hybrid_retriever.add_documents(nodes)
 
-            # Step 4: 迁移 embedding 到 CPU（保留模型对象）
+            # Step 4: 迁移 embedding 到 CPU（保留模型对象，warm 状态）
             vector_retriever.move_embedding_to_cpu()
-
-            # Step 5: 不需要主动恢复 reranker 到 GPU
-            # Reranker 设计为懒加载，只有在 rerank() 时才加载
-            # 这样可以保持 GPU 空闲，让后续查询可以直接加载 reranker
-            logger.info("Document processing done, reranker remains lazy-loaded")
+            logger.info("Document processing done, embedding stays warm in CPU")
 
             logger.info(f"Document processing completed: {len(nodes)} chunks vectorized")
             return True
@@ -99,6 +93,12 @@ class RAGEngine:
             # Ensure embedding model is moved back to CPU even on exception
             if vector_retriever.is_on_gpu():
                 vector_retriever.move_embedding_to_cpu()
+
+    def _build_conversation_history(self, session) -> list[dict[str, Any]] | None:
+        """Build conversation history list from session messages."""
+        if not session:
+            return None
+        return [{"role": msg.role, "content": msg.content} for msg in session.messages]
 
     async def query(
         self,
@@ -147,11 +147,7 @@ class RAGEngine:
             conversation_history: list[dict[str, Any]] | None = None
             if session_manager and request.session_id:
                 session = session_manager.get_session(request.session_id)
-                if session:
-                    conversation_history = [
-                        {"role": msg.role, "content": msg.content}
-                        for msg in session.messages
-                    ]
+                conversation_history = self._build_conversation_history(session)
 
             try:
                 llm_result = await self._generate_answer(
@@ -253,8 +249,11 @@ class RAGEngine:
         token = _trace_id_var.set(trace_id)
 
         try:
-            # Safety check
+            # Stage 1: Safety check
+            t0 = time.time()
             safety_result = self._safety_check(request)
+            safety_time = time.time() - t0
+            logger.info(f"[{trace_id}] Stage 1 (safety_check): {safety_time:.3f}s")
             if not safety_result.passed:
                 ERROR_COUNT.labels(error_type="safety").inc()
                 yield {
@@ -268,7 +267,8 @@ class RAGEngine:
 
             sanitized_query = safety_result.sanitized_text
 
-            # Retrieval
+            # Stage 2: Retrieval & Rerank
+            t0 = time.time()
             try:
                 reranked_nodes = await self._retrieve_and_rerank(sanitized_query, request.filters)
             except Exception as e:
@@ -282,6 +282,9 @@ class RAGEngine:
                     },
                 }
                 return
+            retrieval_time = time.time() - t0
+            node_count = len(reranked_nodes) if reranked_nodes else 0
+            logger.info(f"[{trace_id}] Stage 2 (retrieval+rerank): {retrieval_time:.3f}s, nodes={node_count}")
 
             if not reranked_nodes:
                 RETRIEVAL_COUNT.labels(retriever_type="none").inc()
@@ -297,11 +300,7 @@ class RAGEngine:
             conversation_history: list[dict[str, Any]] | None = None
             if session_manager and request.session_id:
                 session = session_manager.get_session(request.session_id)
-                if session:
-                    conversation_history = [
-                        {"role": msg.role, "content": msg.content}
-                        for msg in session.messages
-                    ]
+                conversation_history = self._build_conversation_history(session)
 
             # Pre-stream: yield placeholder metadata
             yield {
@@ -313,6 +312,7 @@ class RAGEngine:
             }
 
             # Stream generation
+            stage_start = time.time()
             full_answer = ""
             try:
                 async for chunk in self.llm_generator.generate_stream(
@@ -333,29 +333,39 @@ class RAGEngine:
                     },
                 }
                 return
+            generation_time = time.time() - stage_start
+            logger.info(f"[{trace_id}] Stage 3 (LLM streaming): {generation_time:.3f}s, answer_len={len(full_answer)}")
 
             processing_time = time.time() - start_time
 
-            # Evaluate confidence
-            confidence_result = self._evaluate_confidence(
-                reranked_nodes, full_answer, sanitized_query
+            # Stage 4-6: Parallel post-processing (confidence, citations, warnings)
+            stage_start = time.time()
+
+            async def eval_confidence():
+                return self._evaluate_confidence(reranked_nodes, full_answer, sanitized_query)
+
+            async def extract_citations():
+                if not self.config.generation.include_citations:
+                    return []
+                verifier = CitationVerifier()
+                return verifier.extract_and_verify(answer=full_answer, contexts=reranked_nodes)
+
+            async def gen_warnings():
+                if not self.config.generation.include_warnings:
+                    return []
+                return self.warnings_generator.generate(full_answer, reranked_nodes, citations)
+
+            citations, confidence_result = await asyncio.gather(
+                extract_citations(),
+                eval_confidence(),
             )
+            warnings = await gen_warnings()
 
-            # Extract and verify citations
-            citations = []
-            if self.config.generation.include_citations:
-                citation_verifier = CitationVerifier()
-                citations = citation_verifier.extract_and_verify(
-                    answer=full_answer,
-                    contexts=reranked_nodes,
-                )
+            postprocess_time = time.time() - stage_start
+            logger.info(f"[{trace_id}] Stage 4-6 (postprocessing): {postprocess_time:.3f}s")
 
-            # Generate warnings
-            warnings = []
-            if self.config.generation.include_warnings:
-                warnings = self.warnings_generator.generate(full_answer, reranked_nodes, citations)
-
-            # Persist messages
+            # Stage 7: Persist messages
+            stage_start = time.time()
             if session_manager and request.session_id:
                 await session_manager.add_message(
                     request.session_id, "user", request.question
@@ -370,6 +380,8 @@ class RAGEngine:
                         "warnings": [w.model_dump() if hasattr(w, "model_dump") else w for w in warnings],
                     },
                 )
+            persist_time = time.time() - stage_start
+            logger.info(f"[{trace_id}] Stage 7 (message_persist): {persist_time:.3f}s")
 
             QUERY_LATENCY.observe(processing_time)
 
@@ -409,28 +421,74 @@ class RAGEngine:
     async def _retrieve_and_rerank(
         self, query: str, filters: dict[str, Any] | None = None
     ) -> list[RetrievedNode]:
-        """Retrieve and rerank documents for the query."""
-        retrieval_start = time.time()
+        """Retrieve and rerank documents for the query.
+
+        Implements GPU time-sharing: embedding uses GPU first, then reranker uses GPU.
+        This allows limited GPU memory (4GB) to support both models.
+        """
+        vector_retriever = self.hybrid_retriever.vector_retriever
+
+        # ========== Phase 1: Embedding on GPU, Reranker on CPU ==========
+        # 1. Ensure reranker is NOT on GPU (free ~1.8GB for embedding)
+        if self.reranker.is_on_gpu():
+            logger.info("[_retrieve_and_rerank] Moving reranker to CPU to free GPU memory for embedding")
+            self.reranker.move_to_cpu()
+
+        # 2. Load embedding to GPU (requires ~1.5GB)
+        embedding_on_gpu = vector_retriever.load_embedding_to_gpu()
+        if not embedding_on_gpu:
+            logger.warning("[_retrieve_and_rerank] Embedding GPU load failed, using CPU (slower)")
+        else:
+            logger.info("[_retrieve_and_rerank] Embedding loaded on GPU")
+
+        # 3. Execute vector+BM25 retrieval
+        t0 = time.time()
         retrieved_nodes = await self.hybrid_retriever.search(
             query=query,
             top_k=self.config.retrieval.final_top_k * 2,
             filters=filters,
         )
-        RETRIEVAL_LATENCY.observe(time.time() - retrieval_start)
+        retrieval_elapsed = time.time() - t0
+        logger.info(f"  [_retrieve_and_rerank] vector+bm25 search: {retrieval_elapsed:.3f}s, got {len(retrieved_nodes)} nodes (embedding_on_gpu={embedding_on_gpu})")
 
         if not retrieved_nodes:
+            # Even if no results, still need to release GPU memory
+            if vector_retriever.is_on_gpu():
+                vector_retriever.move_embedding_to_cpu()
             return []
+
+        # 4. Release embedding from GPU (free ~1.5GB for reranker)
+        # Keep embedding model in CPU memory - next load will be faster (warm)
+        if vector_retriever.is_on_gpu():
+            vector_retriever.move_embedding_to_cpu()
+            logger.info("[_retrieve_and_rerank] Embedding released from GPU")
 
         RETRIEVAL_COUNT.labels(retriever_type="hybrid").inc()
 
-        rerank_start = time.time()
+        # ========== Phase 2: Reranker on GPU ==========
+        # 5. Load reranker to GPU (requires ~1.8GB)
+        reranker_on_gpu = self.reranker.ensure_on_gpu()
+        if not reranker_on_gpu:
+            logger.warning("[_retrieve_and_rerank] Reranker GPU load failed, using CPU (slower)")
+
+        # 6. Execute reranking
+        t1 = time.time()
         reranked_nodes = self.reranker.rerank(
             query=query,
             candidates=retrieved_nodes[: self.config.retrieval.final_top_k * 2],
         )
-        RERANK_LATENCY.observe(time.time() - rerank_start)
+        rerank_elapsed = time.time() - t1
+        logger.info(f"  [_retrieve_and_rerank] rerank: {rerank_elapsed:.3f}s, got {len(reranked_nodes)} nodes (reranker_on_gpu={reranker_on_gpu})")
 
-        # Convert RerankedNode back to RetrievedNode for type consistency
+        RETRIEVAL_LATENCY.observe(retrieval_elapsed)
+        RERANK_LATENCY.observe(rerank_elapsed)
+
+        # 7. Move reranker to CPU to make room for embedding on next query
+        # This keeps embedding warm (loaded in CPU memory) for faster subsequent loads
+        if self.reranker.is_on_gpu():
+            self.reranker.move_to_cpu()
+            logger.info("[_retrieve_and_rerank] Reranker released from GPU, embedding stays warm in CPU")
+
         final_nodes = reranked_nodes[: self.config.retrieval.final_top_k]
         return [
             RetrievedNode(
@@ -453,7 +511,7 @@ class RAGEngine:
         result = await self.llm_generator.generate(
             query=query,
             contexts=contexts,
-            include_citations=self.config.generation.include_citations,
+            include_citations=False,  # RAGEngine extracts citations in post-processing
             conversation_history=conversation_history,
         )
         GENERATION_LATENCY.observe(time.time() - generation_start)

@@ -1,6 +1,6 @@
 import threading
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 import torch
 from loguru import logger
@@ -37,7 +37,8 @@ def get_gpu_memory_status() -> GPUMemoryStatus:
             free_gb=free,
             is_known=True,
         )
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to get GPU memory status: {e}")
         return GPUMemoryStatus.unknown()
 
 
@@ -54,6 +55,41 @@ class GPUMemoryManager:
     def __init__(self):
         self._loaded_models: dict[str, int] = {}  # model_name -> memory_mb
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._pressure_callbacks: list[Callable[[float], None]] = []  # memory pressure callbacks
+        self._pressure_threshold = 0.8  # 80% usage triggers callbacks
+
+    def register_pressure_callback(self, callback: Callable[[float], None], threshold: float = 0.8) -> None:
+        """Register a callback to be invoked when GPU memory pressure is high.
+
+        Args:
+            callback: Function that takes memory_usage_ratio (0.0-1.0) as argument
+            threshold: Memory usage ratio threshold to trigger callback (default 0.8)
+        """
+        self._pressure_callbacks.append(callback)
+        self._pressure_threshold = threshold
+
+    def _check_memory_pressure(self) -> None:
+        """Check memory pressure and invoke callbacks if threshold exceeded."""
+        if not self._pressure_callbacks:
+            return
+
+        info = self.get_memory_info()
+        if not info["available"]:
+            return
+
+        total = info.get("total_mb", 0)
+        if total <= 0:
+            return
+
+        # Calculate memory pressure as usage ratio (reserved / total)
+        pressure_ratio = (total - info.get("free_mb", 0)) / total
+
+        if pressure_ratio > self._pressure_threshold:
+            for callback in self._pressure_callbacks:
+                try:
+                    callback(pressure_ratio)
+                except Exception as e:
+                    logger.warning(f"Memory pressure callback failed: {e}")
 
     @classmethod
     def get_instance(cls) -> "GPUMemoryManager":
@@ -155,6 +191,7 @@ class GPUMemoryManager:
 
         self._loaded_models[model_name] = int(memory_mb)
         logger.info(f"Registered {model_name} on GPU: {memory_mb}MB")
+        self._check_memory_pressure()  # Check pressure after registration
         return True
 
     def unregister_model(self, model_name: str) -> bool:

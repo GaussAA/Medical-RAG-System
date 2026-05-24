@@ -1,16 +1,36 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from app.api.routes import query, documents, sessions  # noqa: F401
+from app.api.deps import limiter
+from app.api.routes import query, documents, sessions, evaluation  # noqa: F401
 from app.api.routes import metrics as metrics_router
 from app.api.routes import health as health_router
 from app.core.database import close_engine, get_session_factory, _ensure_engine_initialized
 from app.services.document import DocumentService
 from app.services.session import SessionManager
 from config.settings import get_settings
+
+# Rate limiter instance
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
 
 @asynccontextmanager
@@ -40,6 +60,7 @@ async def lifespan(app: FastAPI):
         app.state.startup_session = startup_session
 
         logger.info("Data recovery from database completed")
+
     except Exception as e:
         logger.error(f"Failed to recover data from database: {e}")
 
@@ -53,6 +74,9 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "session_manager") and app.state.session_manager:
         await app.state.session_manager.close()
         logger.debug("Session manager closed")
+    if hasattr(app.state, "startup_session") and app.state.startup_session:
+        await app.state.startup_session.close()
+        logger.debug("Startup session closed")
     await close_engine()
 
 
@@ -66,6 +90,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Add rate limiter
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # Add security headers
+    app.add_middleware(SecurityHeadersMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors.allow_origins,
@@ -77,6 +108,7 @@ def create_app() -> FastAPI:
     app.include_router(query.router)
     app.include_router(documents.router)
     app.include_router(sessions.router)
+    app.include_router(evaluation.router)
     app.include_router(metrics_router.router)
     app.include_router(health_router.router)
 

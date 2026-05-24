@@ -31,7 +31,7 @@ class TestVectorRetriever:
                 )
             ]
 
-            with patch('asyncio.get_event_loop') as mock_get_loop:
+            with patch('asyncio.get_running_loop') as mock_get_loop:
                 mock_loop_instance = MagicMock()
                 mock_get_loop.return_value = mock_loop_instance
                 mock_loop_instance.run_in_executor = AsyncMock(return_value=[[0.1] * 1024])

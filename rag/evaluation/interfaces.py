@@ -5,6 +5,10 @@ from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.schemas import QueryResponse
+    from rag.evaluation.evaluator import RAGEvaluationResult
+    from rag.evaluation.retrieval_eval import RetrievalMetrics
+    from rag.evaluation.generation_eval import GenerationMetrics
+    from rag.evaluation.medical_safety_eval import MedicalSafetyMetrics
 
 
 @runtime_checkable
