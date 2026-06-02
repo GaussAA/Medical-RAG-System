@@ -148,19 +148,18 @@ Output in JSON format:
             # Try to extract JSON from response with robust parsing
             try:
                 import re
-                # Find JSON block - handle both ```json and bare JSON
-                json_match = re.search(r'\{[^{}]*\}', response_text, re.DOTALL)
-                if json_match:
-                    # Try to find a complete JSON object
-                    start_idx = response_text.find('{')
-                    end_idx = response_text.rfind('}')
-                    if start_idx != -1 and end_idx != -1:
-                        json_str = response_text[start_idx:end_idx+1]
-                        # Clean up common JSON issues (trailing commas, etc.)
-                        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
-                        parsed = json.loads(json_str)
-                        score = parsed.get("faithfulness_score", 0.5)
-                        return float(min(max(score, 0.0), 1.0))
+                # Extract JSON by finding outermost braces (handles nested JSON)
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}')
+                if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+                    json_str = response_text[start_idx:end_idx + 1]
+                    # Clean up trailing commas before ] or }
+                    json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+                    # Also fix possible double-escaped quotes
+                    json_str = json_str.replace('\\"', '"').replace('"{', '{').replace('}"', '}')
+                    parsed = json.loads(json_str)
+                    score = parsed.get("faithfulness_score", 0.5)
+                    return float(min(max(score, 0.0), 1.0))
                 return 0.5
             except (json.JSONDecodeError, ValueError) as e:
                 logger.warning(f"Failed to parse faithfulness response: {e}")

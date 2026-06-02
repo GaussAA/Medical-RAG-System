@@ -32,15 +32,15 @@ def render_evaluation_metrics(result: dict):
     col1, col2, col3 = st.columns(3)
 
     overall = result.get("overall_score", 0.0)
-    col1.metric("综合评分", f"{overall:.2%}")
+    col1.metric("综合评分", f"{overall:.2f}")
 
     retrieval = result.get("retrieval", {})
     mrr = retrieval.get("mrr", 0.0)
-    col2.metric("检索 MRR", f"{mrr:.2%}")
+    col2.metric("检索 MRR", f"{mrr:.2f}")
 
     generation = result.get("generation", {})
     faithfulness = generation.get("faithfulness", 0.0)
-    col3.metric("答案忠实度", f"{faithfulness:.2%}")
+    col3.metric("答案忠实度", f"{faithfulness:.2f}")
 
 
 def render_retrieval_metrics(retrieval: dict):
@@ -48,12 +48,12 @@ def render_retrieval_metrics(retrieval: dict):
     st.markdown("#### 检索指标")
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("命中率", f"{retrieval.get('hit_rate', 0):.2%}")
-    col2.metric("MRR@10", f"{retrieval.get('mrr', 0):.2%}")
+    col1.metric("命中率", f"{retrieval.get('hit_rate', 0):.2f}")
+    col2.metric("MRR@10", f"{retrieval.get('mrr', 0):.2f}")
 
     ndcg_at_k = retrieval.get("ndcg_at_k", {})
     if 10 in ndcg_at_k:
-        col3.metric("NDCG@10", f"{ndcg_at_k[10]:.2%}")
+        col3.metric("NDCG@10", f"{ndcg_at_k[10]:.2f}")
 
 
 def render_generation_metrics(generation: dict):
@@ -61,10 +61,10 @@ def render_generation_metrics(generation: dict):
     st.markdown("#### 生成指标")
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("忠实度", f"{generation.get('faithfulness', 0):.2%}")
-    col2.metric("答案相关度", f"{generation.get('answer_relevancy', 0):.2%}")
-    col3.metric("引用准确率", f"{generation.get('citation_accuracy', 0):.2%}")
-    col4.metric("幻觉率", f"{generation.get('hallucination_ratio', 0):.2%}")
+    col1.metric("忠实度", f"{generation.get('faithfulness', 0):.2f}")
+    col2.metric("答案相关度", f"{generation.get('answer_relevancy', 0):.2f}")
+    col3.metric("引用准确率", f"{generation.get('citation_accuracy', 0):.2f}")
+    col4.metric("幻觉率", f"{generation.get('hallucination_ratio', 0):.2f}")
 
 
 def render_medical_safety_metrics(safety: dict):
@@ -72,11 +72,11 @@ def render_medical_safety_metrics(safety: dict):
     st.markdown("#### 医疗安全指标")
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("安全评分", f"{safety.get('safety_score', 0):.2%}")
+    col1.metric("安全评分", f"{safety.get('safety_score', 0):.2f}")
 
     entity_acc = safety.get("entity_accuracy")
     if entity_acc is not None:
-        col2.metric("实体准确率", f"{entity_acc:.2%}")
+        col2.metric("实体准确率", f"{entity_acc:.2f}")
     else:
         col2.metric("实体准确率", "N/A")
 
@@ -133,9 +133,9 @@ def render_benchmark_results(results: list[dict]):
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("评估数量", total)
-    col2.metric("平均综合分", f"{avg_overall:.2%}")
-    col3.metric("平均 MRR", f"{avg_retrieval:.2%}")
-    col4.metric("平均忠实度", f"{avg_faithfulness:.2%}")
+    col2.metric("平均综合分", f"{avg_overall:.2f}")
+    col3.metric("平均 MRR", f"{avg_retrieval:.2f}")
+    col4.metric("平均忠实度", f"{avg_faithfulness:.2f}")
 
     st.markdown("---")
 
@@ -298,7 +298,7 @@ def view_history():
                         st.markdown(f"**{query_id}**")
                         st.caption(f"时间: {timestamp[:19]}")
                     with col2:
-                        st.metric("评分", f"{overall:.2%}")
+                        st.metric("评分", f"{overall:.2f}")
 
                     if st.button("查看详情", key=f"view_{query_id}"):
                         render_single_evaluation(query_id, item)
