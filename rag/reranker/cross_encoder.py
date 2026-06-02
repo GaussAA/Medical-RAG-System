@@ -1,8 +1,10 @@
+import gc
 from typing import Any
 
 import torch
 from loguru import logger
 
+from app.core.gpu_memory_manager import GPUMemoryManager
 from app.models.schemas import RetrievedNode, RerankedNode
 from config.settings import get_settings
 
@@ -50,8 +52,6 @@ class Reranker:
         Returns:
             bool: 是否成功迁移到 GPU
         """
-        from app.core.gpu_memory_manager import GPUMemoryManager
-
         gpu_manager = GPUMemoryManager.get_instance()
 
         # 如果已在 GPU 上，直接返回
@@ -61,7 +61,11 @@ class Reranker:
         # 确保模型已加载
         self._ensure_model_loaded()
 
-        # 检测 GPU 显存（只调用一次，避免重复调用导致不同结果）
+        # 强制 GC + 缓存清理，获取准确的可用显存
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        # 检测 GPU 显存
         info = gpu_manager.get_memory_info()
         settings = get_settings()
         safety_margin = settings.models.gpu_safety_margin_mb
@@ -97,8 +101,6 @@ class Reranker:
         Returns:
             bool: 是否成功迁移
         """
-        from app.core.gpu_memory_manager import GPUMemoryManager
-
         gpu_manager = GPUMemoryManager.get_instance()
 
         if not self._model_on_gpu:
@@ -115,7 +117,8 @@ class Reranker:
         # 从 GPU 管理器注销
         gpu_manager.unregister_model("reranker")
 
-        # 清理 CUDA 缓存
+        # 强制 GC + 缓存清理，最小化显存碎片
+        gc.collect()
         torch.cuda.empty_cache()
 
         logger.info("Reranker model moved to CPU")

@@ -141,7 +141,7 @@ class TestRerankerEnsureOnGpu:
             mock_gpu_manager = MagicMock()
             mock_gpu_manager.get_memory_info.return_value = {"free_mb": 1024}
 
-            with patch('app.core.gpu_memory_manager.GPUMemoryManager') as mock_gpum:
+            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 result = reranker.ensure_on_gpu()
@@ -166,7 +166,7 @@ class TestRerankerEnsureOnGpu:
             mock_gpu_manager = MagicMock()
             mock_gpu_manager.get_memory_info.return_value = {"free_mb": 8192}
 
-            with patch('app.core.gpu_memory_manager.GPUMemoryManager') as mock_gpum:
+            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 result = reranker.ensure_on_gpu()
@@ -206,7 +206,7 @@ class TestRerankerMoveToCpu:
 
             mock_gpu_manager = MagicMock()
 
-            with patch('app.core.gpu_memory_manager.GPUMemoryManager') as mock_gpum:
+            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 result = reranker.move_to_cpu()
@@ -233,7 +233,7 @@ class TestRerankerMoveToCpu:
 
             mock_gpu_manager = MagicMock()
 
-            with patch('app.core.gpu_memory_manager.GPUMemoryManager') as mock_gpum:
+            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 with patch('torch.cuda.empty_cache') as mock_clear:

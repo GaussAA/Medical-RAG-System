@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -104,6 +105,11 @@ def create_app() -> FastAPI:
         allow_methods=settings.cors.allow_methods,
         allow_headers=settings.cors.allow_headers,
     )
+
+    @app.get("/")
+    async def root():
+        """Root endpoint — redirects to API documentation."""
+        return RedirectResponse(url="/docs")
 
     app.include_router(query.router)
     app.include_router(documents.router)

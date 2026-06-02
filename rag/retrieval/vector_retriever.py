@@ -1,6 +1,8 @@
 import asyncio
+import gc
 from typing import Any
 
+import torch
 from loguru import logger
 
 from app.models.schemas import RetrievedNode
@@ -82,6 +84,10 @@ class VectorRetriever(BaseRetriever):
 
         _ = self.embedding_model
 
+        # Force cleanup before checking GPU memory to get accurate free size
+        gc.collect()
+        torch.cuda.empty_cache()
+
         settings = get_settings()
         safety_margin_mb = settings.models.gpu_safety_margin_mb
         safety_margin_gb = safety_margin_mb / 1024
@@ -125,8 +131,8 @@ class VectorRetriever(BaseRetriever):
 
         gpu_manager.unregister_model("embedding")
 
-        import torch
-
+        # Force GC + cache flush to minimize GPU memory fragmentation
+        gc.collect()
         torch.cuda.empty_cache()
 
         logger.info("Embedding model moved to CPU")

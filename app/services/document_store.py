@@ -31,6 +31,15 @@ class DocumentStore:
             self.async_session = None
             self._owns_session = False
 
+    async def __aenter__(self):
+        """Async context manager entry — ensures session is initialized."""
+        await self._ensure_session()
+        return self
+
+    async def __aexit__(self, *args):
+        """Async context manager exit — closes owned session automatically."""
+        await self.close_session()
+
     async def create_document(
         self,
         doc_id: str,

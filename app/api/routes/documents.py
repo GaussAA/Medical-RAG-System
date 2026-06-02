@@ -474,12 +474,11 @@ async def list_documents(
     """List documents with filtering and pagination."""
     from app.services.document_store import DocumentStore
 
-    store = DocumentStore()
-
     # Parse tags from comma-separated string
     tag_list = [t.strip().lower() for t in tags.split(",")] if tags else None
 
-    documents, total = await store.list_documents(
+    async with DocumentStore() as store:
+        documents, total = await store.list_documents(
         status=status,
         tags=tag_list,
         file_type=file_type,
@@ -550,8 +549,8 @@ async def update_document(
     """Update document tags and/or status."""
     from app.services.document_store import DocumentStore
 
-    store = DocumentStore()
-    doc = await store.update_document(
+    async with DocumentStore() as store:
+        doc = await store.update_document(
         doc_id=document_id,
         status=update_data.status,
         tags=update_data.tags,
@@ -638,8 +637,8 @@ async def get_document_chunks(
     """Get all chunks for a document with pagination."""
     from app.services.document_store import DocumentStore
 
-    store = DocumentStore()
-    chunks, total = await store.get_chunks(document_id, page=page, page_size=page_size)
+    async with DocumentStore() as store:
+        chunks, total = await store.get_chunks(document_id, page=page, page_size=page_size)
 
     return ChunkListResponse(
         chunks=[
@@ -670,10 +669,9 @@ async def update_chunk(
     """Update a chunk's content and/or metadata."""
     from app.services.document_store import DocumentStore
 
-    store = DocumentStore()
-
     # Update chunk in PostgreSQL
-    chunk = await store.update_chunk(
+    async with DocumentStore() as store:
+        chunk = await store.update_chunk(
         doc_id=document_id,
         chunk_id=chunk_id,
         content=update_data.content,
@@ -707,8 +705,8 @@ async def delete_chunk(
     """Delete a single chunk from a document."""
     from app.services.document_store import DocumentStore
 
-    store = DocumentStore()
-    success = await store.delete_chunk(document_id, chunk_id)
+    async with DocumentStore() as store:
+        success = await store.delete_chunk(document_id, chunk_id)
     if not success:
         raise HTTPException(status_code=404, detail="Chunk not found")
 
@@ -735,26 +733,26 @@ async def batch_delete_documents(
     if not batch_data.ids:
         raise HTTPException(status_code=400, detail="ids array cannot be empty")
 
-    store = DocumentStore()
     deleted = []
     failed = []
 
-    for doc_id in batch_data.ids:
-        try:
-            # Delete from vector/BM25
-            from app.services.retrieval_indexer import RetrievalIndexer
+    async with DocumentStore() as store:
+        for doc_id in batch_data.ids:
+            try:
+                # Delete from vector/BM25
+                from app.services.retrieval_indexer import RetrievalIndexer
 
-            indexer = RetrievalIndexer()
-            await indexer.delete_documents(doc_id, 100)  # Approximate max chunks
+                indexer = RetrievalIndexer()
+                await indexer.delete_documents(doc_id, 100)  # Approximate max chunks
 
-            # Delete from PostgreSQL
-            success = await store.delete_document(doc_id)
-            if success:
-                deleted.append(doc_id)
-            else:
-                failed.append({"id": doc_id, "error": "not found"})
-        except Exception as e:
-            failed.append({"id": doc_id, "error": str(e)})
+                # Delete from PostgreSQL
+                success = await store.delete_document(doc_id)
+                if success:
+                    deleted.append(doc_id)
+                else:
+                    failed.append({"id": doc_id, "error": "not found"})
+            except Exception as e:
+                failed.append({"id": doc_id, "error": str(e)})
 
     return BatchOperationResponse(deleted=deleted, failed=failed)
 
@@ -773,24 +771,24 @@ async def batch_update_documents(
     if not batch_data.ids:
         raise HTTPException(status_code=400, detail="ids array cannot be empty")
 
-    store = DocumentStore()
     updated = []
     failed = []
 
-    for doc_id in batch_data.ids:
-        try:
-            doc = await store.update_document(
-                doc_id=doc_id,
-                status=batch_data.status,
-                tags=batch_data.tags,
-                operation=batch_data.operation,
-            )
-            if doc:
-                updated.append(doc_id)
-            else:
-                failed.append({"id": doc_id, "error": "not found"})
-        except Exception as e:
-            failed.append({"id": doc_id, "error": str(e)})
+    async with DocumentStore() as store:
+        for doc_id in batch_data.ids:
+            try:
+                doc = await store.update_document(
+                    doc_id=doc_id,
+                    status=batch_data.status,
+                    tags=batch_data.tags,
+                    operation=batch_data.operation,
+                )
+                if doc:
+                    updated.append(doc_id)
+                else:
+                    failed.append({"id": doc_id, "error": "not found"})
+            except Exception as e:
+                failed.append({"id": doc_id, "error": str(e)})
 
     return BatchOperationResponse(updated=updated, failed=failed)
 
