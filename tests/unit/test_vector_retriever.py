@@ -1,5 +1,6 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.models.schemas import RetrievedNode
 
@@ -17,10 +18,12 @@ class TestVectorRetriever:
         mock_client.upsert = MagicMock()
 
         # Properly patch the class-level _client via _get_client
-        with patch.object(VectorRetriever, '_get_client', return_value=mock_client):
+        with patch.object(VectorRetriever, "_get_client", return_value=mock_client):
             # Mock embedding model
             vr._embedding_model = MagicMock()
-            vr._embedding_model.encode = MagicMock(return_value=MagicMock(tolist=MagicMock(return_value=[[0.1] * 1024])))
+            vr._embedding_model.encode = MagicMock(
+                return_value=MagicMock(tolist=MagicMock(return_value=[[0.1] * 1024]))
+            )
 
             nodes = [
                 RetrievedNode(
@@ -31,7 +34,7 @@ class TestVectorRetriever:
                 )
             ]
 
-            with patch('asyncio.get_running_loop') as mock_get_loop:
+            with patch("asyncio.get_running_loop") as mock_get_loop:
                 mock_loop_instance = MagicMock()
                 mock_get_loop.return_value = mock_loop_instance
                 mock_loop_instance.run_in_executor = AsyncMock(return_value=[[0.1] * 1024])
@@ -50,7 +53,7 @@ class TestVectorRetriever:
         mock_client = MagicMock()
         mock_client.upsert = MagicMock()
 
-        with patch.object(VectorRetriever, '_get_client', return_value=mock_client):
+        with patch.object(VectorRetriever, "_get_client", return_value=mock_client):
             # Mock embedding model - should NOT be called
             vr._embedding_model = MagicMock()
             vr._embedding_model.encode = MagicMock()
@@ -73,5 +76,5 @@ class TestVectorRetriever:
             # Verify upsert was called with the pre-encoded vector
             mock_client.upsert.assert_called_once()
             call_args = mock_client.upsert.call_args
-            points = call_args[1]['points']
-            assert points[0]['vector'] == pre_encoded
+            points = call_args[1]["points"]
+            assert points[0]["vector"] == pre_encoded

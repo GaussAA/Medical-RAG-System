@@ -1,7 +1,6 @@
 # tests/unit/test_citation_verifier.py
-import pytest
-from app.services.citation_verifier import CitationVerifier
 from app.models.schemas import Citation, CitationPosition, RetrievedNode
+from app.services.citation_verifier import CitationVerifier
 
 
 def _make_ctx(
@@ -171,7 +170,7 @@ class TestExtractAndVerifySourceIndexOutOfRange:
 
         result = self.verifier.extract_and_verify(answer, contexts)
 
-        direct_citations = [c for c in result if c.position == CitationPosition.DIRECT]
+        _direct_citations = [c for c in result if c.position == CitationPosition.DIRECT]
         hallucination_citations = [c for c in result if c.position == CitationPosition.UNVERIFIED]
         # The two out-of-range source indices are hallucinations
         assert len(hallucination_citations) == 2
@@ -187,9 +186,7 @@ class TestExtractAndVerifyEmptyInputs:
         self.verifier = CitationVerifier()
 
     def test_empty_contexts_returns_empty_list(self):
-        result = self.verifier.extract_and_verify(
-            "根据[来源1](文件#5)的内容", []
-        )
+        result = self.verifier.extract_and_verify("根据[来源1](文件#5)的内容", [])
         assert result == []
 
     def test_empty_answer_returns_uncited_contexts(self):
@@ -470,16 +467,12 @@ class TestVerifyCitation:
         self.verifier = CitationVerifier()
 
     def test_returns_false_when_ctx_file_empty(self):
-        result = self.verifier._verify_citation(
-            cited_file="指南.md", cited_page=1, ctx_file="", ctx_page=1
-        )
+        result = self.verifier._verify_citation(cited_file="指南.md", cited_page=1, ctx_file="", ctx_page=1)
         assert result is False
 
     def test_returns_true_when_cited_file_is_none(self):
         """If no cited file provided, can't verify → return True (lenient)."""
-        result = self.verifier._verify_citation(
-            cited_file=None, cited_page=None, ctx_file="指南.md", ctx_page=5
-        )
+        result = self.verifier._verify_citation(cited_file=None, cited_page=None, ctx_file="指南.md", ctx_page=5)
         assert result is True
 
     def test_returns_false_when_files_dont_match(self):
@@ -489,9 +482,7 @@ class TestVerifyCitation:
         assert result is False
 
     def test_returns_false_when_page_mismatch(self):
-        result = self.verifier._verify_citation(
-            cited_file="指南", cited_page=5, ctx_file="指南", ctx_page=10
-        )
+        result = self.verifier._verify_citation(cited_file="指南", cited_page=5, ctx_file="指南", ctx_page=10)
         assert result is False
 
     def test_returns_true_when_all_match(self):
@@ -501,15 +492,11 @@ class TestVerifyCitation:
         assert result is True
 
     def test_cited_page_none_skips_page_check(self):
-        result = self.verifier._verify_citation(
-            cited_file="指南", cited_page=None, ctx_file="指南", ctx_page=10
-        )
+        result = self.verifier._verify_citation(cited_file="指南", cited_page=None, ctx_file="指南", ctx_page=10)
         assert result is True
 
     def test_ctx_page_none_skips_page_check(self):
-        result = self.verifier._verify_citation(
-            cited_file="指南", cited_page=5, ctx_file="指南", ctx_page=None
-        )
+        result = self.verifier._verify_citation(cited_file="指南", cited_page=5, ctx_file="指南", ctx_page=None)
         assert result is True
 
 
@@ -566,9 +553,7 @@ class TestFilesMatch:
 
     def test_medical_suffix_normalization_match(self):
         """After removing common medical suffixes, the base names match."""
-        result = self.verifier._files_match(
-            "糖尿病诊疗指南", "糖尿病诊疗共识"
-        )
+        result = self.verifier._files_match("糖尿病诊疗指南", "糖尿病诊疗共识")
         assert result is True
 
     def test_no_match_different_files(self):

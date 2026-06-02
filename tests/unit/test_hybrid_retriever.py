@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.models.schemas import RetrievedNode
 from rag.retrieval.hybrid_retriever import HybridRetriever
@@ -97,9 +98,12 @@ class TestHybridRetrieverRRF:
     """Test HybridRetriever reciprocal rank fusion."""
 
     def setup_method(self):
-        with patch('rag.retrieval.hybrid_retriever.get_settings') as mock_settings:
+        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
-            mock_settings.return_value.rag.retrieval.weights = {"vector": 0.6, "bm25": 0.4}
+            mock_settings.return_value.rag.retrieval.weights = {
+                "vector": 0.6,
+                "bm25": 0.4,
+            }
             mock_settings.return_value.rag.retrieval.rrf_k = 60
             mock_settings.return_value.rag.retrieval.final_top_k = 10
             mock_settings.return_value.rag.retrieval.vector_top_k = 20
@@ -165,9 +169,12 @@ class TestHybridRetrieverParallelSearch:
     """Test HybridRetriever parallel search."""
 
     def setup_method(self):
-        with patch('rag.retrieval.hybrid_retriever.get_settings') as mock_settings:
+        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
-            mock_settings.return_value.rag.retrieval.weights = {"vector": 0.6, "bm25": 0.4}
+            mock_settings.return_value.rag.retrieval.weights = {
+                "vector": 0.6,
+                "bm25": 0.4,
+            }
             mock_settings.return_value.rag.retrieval.rrf_k = 60
             mock_settings.return_value.rag.retrieval.final_top_k = 10
             mock_settings.return_value.rag.retrieval.vector_top_k = 20
@@ -240,9 +247,12 @@ class TestHybridRetrieverSearch:
     """Test HybridRetriever search method."""
 
     def setup_method(self):
-        with patch('rag.retrieval.hybrid_retriever.get_settings') as mock_settings:
+        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
-            mock_settings.return_value.rag.retrieval.weights = {"vector": 0.6, "bm25": 0.4}
+            mock_settings.return_value.rag.retrieval.weights = {
+                "vector": 0.6,
+                "bm25": 0.4,
+            }
             mock_settings.return_value.rag.retrieval.rrf_k = 60
             mock_settings.return_value.rag.retrieval.final_top_k = 10
             mock_settings.return_value.rag.retrieval.vector_top_k = 20
@@ -270,12 +280,16 @@ class TestHybridRetrieverSearch:
     async def test_search_respects_top_k(self):
         """Should limit results to top_k."""
         vector_results = [
-            RetrievedNode(node_id=f"v{i}", content=f"content{i}", score=0.9 - i*0.01, metadata={})
+            RetrievedNode(
+                node_id=f"v{i}",
+                content=f"content{i}",
+                score=0.9 - i * 0.01,
+                metadata={},
+            )
             for i in range(30)
         ]
         bm25_results = [
-            RetrievedNode(node_id=f"b{i}", content=f"bm25{i}", score=0.8 - i*0.01, metadata={})
-            for i in range(30)
+            RetrievedNode(node_id=f"b{i}", content=f"bm25{i}", score=0.8 - i * 0.01, metadata={}) for i in range(30)
         ]
 
         self.retriever.vector_retriever.retrieve = AsyncMock(return_value=vector_results)
@@ -289,8 +303,18 @@ class TestHybridRetrieverSearch:
     async def test_search_applies_content_type_boosting(self):
         """Should boost content type based on query."""
         vector_results = [
-            RetrievedNode(node_id="text1", content="普通文本", score=0.8, metadata={"content_type": "text"}),
-            RetrievedNode(node_id="table1", content="| 表1 |", score=0.7, metadata={"content_type": "table"}),
+            RetrievedNode(
+                node_id="text1",
+                content="普通文本",
+                score=0.8,
+                metadata={"content_type": "text"},
+            ),
+            RetrievedNode(
+                node_id="table1",
+                content="| 表1 |",
+                score=0.7,
+                metadata={"content_type": "table"},
+            ),
         ]
         bm25_results = []
 
@@ -322,9 +346,12 @@ class TestHybridRetrieverAddDocuments:
     """Test HybridRetriever add_documents."""
 
     def setup_method(self):
-        with patch('rag.retrieval.hybrid_retriever.get_settings') as mock_settings:
+        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
-            mock_settings.return_value.rag.retrieval.weights = {"vector": 0.6, "bm25": 0.4}
+            mock_settings.return_value.rag.retrieval.weights = {
+                "vector": 0.6,
+                "bm25": 0.4,
+            }
             mock_settings.return_value.rag.retrieval.rrf_k = 60
             mock_settings.return_value.rag.retrieval.final_top_k = 10
             mock_settings.return_value.rag.retrieval.vector_top_k = 20
@@ -364,9 +391,12 @@ class TestHybridRetrieverDeleteDocuments:
     """Test HybridRetriever delete_documents."""
 
     def setup_method(self):
-        with patch('rag.retrieval.hybrid_retriever.get_settings') as mock_settings:
+        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
-            mock_settings.return_value.rag.retrieval.weights = {"vector": 0.6, "bm25": 0.4}
+            mock_settings.return_value.rag.retrieval.weights = {
+                "vector": 0.6,
+                "bm25": 0.4,
+            }
             mock_settings.return_value.rag.retrieval.rrf_k = 60
             mock_settings.return_value.rag.retrieval.final_top_k = 10
             mock_settings.return_value.rag.retrieval.vector_top_k = 20
@@ -401,9 +431,12 @@ class TestHybridRetrieverDeleteDocumentsAtomic:
     """Test HybridRetriever delete_documents_atomic."""
 
     def setup_method(self):
-        with patch('rag.retrieval.hybrid_retriever.get_settings') as mock_settings:
+        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
-            mock_settings.return_value.rag.retrieval.weights = {"vector": 0.6, "bm25": 0.4}
+            mock_settings.return_value.rag.retrieval.weights = {
+                "vector": 0.6,
+                "bm25": 0.4,
+            }
             mock_settings.return_value.rag.retrieval.rrf_k = 60
             mock_settings.return_value.rag.retrieval.final_top_k = 10
             mock_settings.return_value.rag.retrieval.vector_top_k = 20
@@ -426,9 +459,7 @@ class TestHybridRetrieverDeleteDocumentsAtomic:
     @pytest.mark.asyncio
     async def test_delete_documents_atomic_vector_failure(self):
         """Should return failure when vector delete fails."""
-        self.retriever.vector_retriever.delete_by_doc_id = AsyncMock(
-            side_effect=Exception("Vector failed")
-        )
+        self.retriever.vector_retriever.delete_by_doc_id = AsyncMock(side_effect=Exception("Vector failed"))
         self.retriever.bm25_retriever.documents = []
         self.retriever.bm25_retriever.corpus = []
         self.retriever.bm25_retriever._save = MagicMock()
@@ -475,6 +506,7 @@ class TestBM25RetrieverFilters:
 
     def setup_method(self):
         from rag.retrieval.bm25_retriever import BM25Retriever
+
         self.retriever = BM25Retriever()
 
     @pytest.mark.asyncio
@@ -499,11 +531,7 @@ class TestBM25RetrieverFilters:
 
         await self.retriever.add(nodes)
 
-        results = await self.retriever.retrieve(
-            "糖尿病",
-            top_k=5,
-            filters={"content_type": "table"}
-        )
+        results = await self.retriever.retrieve("糖尿病", top_k=5, filters={"content_type": "table"})
 
         assert len(results) == 1
         assert results[0].node_id == "2"
@@ -530,11 +558,7 @@ class TestBM25RetrieverFilters:
 
         await self.retriever.add(nodes)
 
-        results = await self.retriever.retrieve(
-            "内容",
-            top_k=5,
-            filters={"doc_id": "doc-1"}
-        )
+        results = await self.retriever.retrieve("内容", top_k=5, filters={"doc_id": "doc-1"})
 
         assert all(r.metadata.get("doc_id") == "doc-1" for r in results)
 
@@ -560,10 +584,6 @@ class TestBM25RetrieverFilters:
 
         await self.retriever.add(nodes)
 
-        results = await self.retriever.retrieve(
-            "内容",
-            top_k=5,
-            filters={"heading_id": "heading-1"}
-        )
+        results = await self.retriever.retrieve("内容", top_k=5, filters={"heading_id": "heading-1"})
 
         assert all(r.metadata.get("heading_id") == "heading-1" for r in results)

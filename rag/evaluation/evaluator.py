@@ -4,14 +4,13 @@ Provides unified evaluation interface combining retrieval, generation, and medic
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from app.models.schemas import QueryResponse
-
-from rag.evaluation.retrieval_eval import RetrievalEvaluator, RetrievalMetrics
 from rag.evaluation.generation_eval import GenerationEvaluator
 from rag.evaluation.medical_safety_eval import MedicalSafetyEvaluator
+from rag.evaluation.retrieval_eval import RetrievalEvaluator, RetrievalMetrics
 
 
 @dataclass
@@ -24,6 +23,7 @@ class EvalGroundTruth:
     reference_answer: str | None = None
     difficulty: str = "medium"
     safety_sensitive: bool = False
+    query_type: str | None = None
 
 
 @dataclass
@@ -136,7 +136,9 @@ class RAGEvaluator:
 
         # Auto-extract retrieved doc IDs from response metadata if not provided
         if not retrieved_doc_ids and response.metadata:
-            retrieved_doc_ids = response.metadata.get("retrieved_doc_ids") or response.metadata.get("retrieved_node_ids") or []
+            retrieved_doc_ids = (
+                response.metadata.get("retrieved_doc_ids") or response.metadata.get("retrieved_node_ids") or []
+            )
 
         # Retrieval evaluation
         retrieval_metrics = self._evaluate_retrieval(
@@ -251,11 +253,7 @@ class RAGEvaluator:
             retrieval_score = (result.mrr + result.retrieval_hit_rate) / 2
 
         # Generation score
-        generation_score = (
-            result.faithfulness * 0.4
-            + result.answer_relevancy * 0.3
-            + result.citation_accuracy * 0.3
-        )
+        generation_score = result.faithfulness * 0.4 + result.answer_relevancy * 0.3 + result.citation_accuracy * 0.3
 
         # Medical safety score
         safety_score = result.safety_score
@@ -289,9 +287,7 @@ class RAGEvaluator:
             query = queries[i] if i < len(queries) else ""
             ground_truth = ground_truths[i] if ground_truths and i < len(ground_truths) else None
             retrieved_ids = (
-                retrieved_doc_ids_list[i]
-                if retrieved_doc_ids_list and i < len(retrieved_doc_ids_list)
-                else None
+                retrieved_doc_ids_list[i] if retrieved_doc_ids_list and i < len(retrieved_doc_ids_list) else None
             )
 
             result = await self.evaluate(

@@ -1,12 +1,14 @@
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
+
 from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session_factory
-from app.models.database import Chunk as DBChunk, Document, Heading
+from app.models.database import Chunk as DBChunk
+from app.models.database import Document, Heading
 
 
 class DocumentStore:
@@ -104,7 +106,7 @@ class DocumentStore:
         """
         session = await self._ensure_session()
         position_to_id = {}
-        position_to_heading = {}  # Maps position to Heading record for FK resolution
+        position_to_heading: dict[int, uuid.UUID] = {}  # Maps position to Heading record for FK resolution
 
         try:
             for heading_info in heading_tree:
@@ -284,9 +286,7 @@ class DocumentStore:
         await session.execute(delete(DBChunk).where(DBChunk.id == uuid.UUID(chunk_id)))
 
         # Reorder remaining chunks
-        remaining_chunks = (
-            select(DBChunk).where(DBChunk.doc_id == uuid.UUID(doc_id)).order_by(DBChunk.position)
-        )
+        remaining_chunks = select(DBChunk).where(DBChunk.doc_id == uuid.UUID(doc_id)).order_by(DBChunk.position)
         result = await session.execute(remaining_chunks)
         chunks_to_reorder = list(result.scalars())
 

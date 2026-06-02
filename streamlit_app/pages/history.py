@@ -56,9 +56,7 @@ else:
                     )
                     if msg_response.status_code == 200:
                         messages = msg_response.json()
-                        st.session_state.messages = [
-                            {"role": m["role"], "content": m["content"]} for m in messages
-                        ]
+                        st.session_state.messages = [{"role": m["role"], "content": m["content"]} for m in messages]
                         # Store metadata for rendering
                         st.session_state.message_metadata = {
                             m["message_id"]: {

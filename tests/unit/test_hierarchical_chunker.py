@@ -55,7 +55,10 @@ class TestHierarchicalChunker:
 
 内容段落。
 """
-        metadata = {"source_file": "test.md", "heading_tree": {1: "主标题", 2: "子章节"}}
+        metadata = {
+            "source_file": "test.md",
+            "heading_tree": {1: "主标题", 2: "子章节"},
+        }
 
         chunks = self.chunker.chunk(text, metadata=metadata)
 
@@ -183,7 +186,12 @@ class TestHierarchicalChunkerEdgeCases:
         # Create text > max_chunk_length (2000 chars)
         long_text = """## 药物治疗
 
-""" + "\n".join([f"- 药物{i}：这是很长的剂量信息，用于测试大型内容的分割功能，需要确保内容足够长以触发分割。" for i in range(100)])
+""" + "\n".join(
+            [
+                f"- 药物{i}：这是很长的剂量信息，用于测试大型内容的分割功能，需要确保内容足够长以触发分割。"
+                for i in range(100)
+            ]
+        )
 
         chunks = self.chunker.chunk(long_text, metadata={"source_file": "test.md"})
 

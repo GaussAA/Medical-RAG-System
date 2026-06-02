@@ -1,7 +1,8 @@
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch, AsyncMock
 import uuid
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.models.schemas import (
     BatchDeleteRequest,
@@ -33,7 +34,7 @@ class TestDocumentStoreFiltering:
                 status="completed",
                 total_chunks=1,
                 tags=[],
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             ),
             MagicMock(
                 id=uuid.uuid4(),
@@ -41,7 +42,7 @@ class TestDocumentStoreFiltering:
                 status="completed",
                 total_chunks=2,
                 tags=[],
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             ),
         ]
 
@@ -191,9 +192,9 @@ class TestDocumentStoreChunkOperations:
         mock_doc = MagicMock()
 
         mock_session_instance = MagicMock()
-        mock_session_instance.get = AsyncMock(side_effect=lambda cls, uid: (
-            mock_chunk if uid == mock_chunk_id else mock_doc
-        ))
+        mock_session_instance.get = AsyncMock(
+            side_effect=lambda cls, uid: mock_chunk if uid == mock_chunk_id else mock_doc
+        )
         mock_session_instance.commit = AsyncMock()
 
         mock_ensure_session = AsyncMock(return_value=mock_session_instance)
@@ -223,6 +224,7 @@ class TestDocumentStoreChunkOperations:
         mock_session_instance.get = AsyncMock(return_value=mock_chunk)
 
         call_count = 0
+
         async def mock_execute(query):
             nonlocal call_count
             call_count += 1

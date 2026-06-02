@@ -20,9 +20,7 @@ class HybridRetriever:
         self.config = settings.rag.retrieval
 
         self.vector_retriever = vector_retriever or VectorRetriever()
-        self.bm25_retriever = bm25_retriever or BM25Retriever(
-            persist_path=self.config.bm25_persist_path
-        )
+        self.bm25_retriever = bm25_retriever or BM25Retriever(persist_path=self.config.bm25_persist_path)
 
         self.vector_weight = self.config.weights.get("vector", 0.6)
         self.bm25_weight = self.config.weights.get("bm25", 0.4)
@@ -189,8 +187,9 @@ class HybridRetriever:
             self.bm25_retriever.corpus = [doc["content"] for doc in remaining_docs]
 
             if self.bm25_retriever.corpus:
-                from rank_bm25 import BM25Plus
-                import jieba
+                import jieba  # type: ignore[import-untyped]
+                from rank_bm25 import BM25Plus  # type: ignore[import-untyped]
+
                 tokenized_corpus = [list(jieba.cut(doc)) for doc in self.bm25_retriever.corpus]
                 self.bm25_retriever.bm25 = BM25Plus(tokenized_corpus)
             else:

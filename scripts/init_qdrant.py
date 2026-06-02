@@ -4,13 +4,15 @@ Qdrant collection initialization script
 Usage:
     uv run python scripts/init_qdrant.py
 """
+
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, NamedVector
+from qdrant_client.models import Distance, VectorParams
+
 from config.settings import get_settings
 
 
@@ -37,7 +39,7 @@ def init_qdrant():
     if collection_name in collection_names:
         print(f"[!] Collection '{collection_name}' already exists, deleting...")
         client.delete_collection(collection_name=collection_name)
-        print(f"    [+] Deleted")
+        print("    [+] Deleted")
 
     # Get embedding dimension from settings
     embedding_dim = settings.models.embedding.dimension
@@ -61,7 +63,7 @@ def init_qdrant():
         print(f"\n[+] Qdrant collection '{collection_name}' is ready!")
         return True
     else:
-        print(f"\n[!] Failed to create collection")
+        print("\n[!] Failed to create collection")
         return False
 
 

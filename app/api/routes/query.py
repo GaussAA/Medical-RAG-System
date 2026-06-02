@@ -1,12 +1,12 @@
 import json
 import uuid
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from app.api.deps import RAGEngineDep, APIKeyDep
+from app.api.deps import APIKeyDep, RAGEngineDep, limiter
 from app.models.schemas import QueryRequest, QueryResponse, RiskWarning
-from app.api.deps import limiter
 
 router = APIRouter(prefix="/api/v1", tags=["query"])
 
@@ -88,9 +88,7 @@ async def query_stream(
 
     async def event_generator():
         try:
-            async for event in rag_engine.query_stream(
-                request_data, session_manager, trace_id=trace_id
-            ):
+            async for event in rag_engine.query_stream(request_data, session_manager, trace_id=trace_id):
                 event_type = event["type"]
                 event_data = event["data"]
                 yield f"event: {event_type}\ndata: {json.dumps(event_data, ensure_ascii=False)}\n\n"

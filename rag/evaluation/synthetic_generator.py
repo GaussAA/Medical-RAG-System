@@ -1,7 +1,7 @@
 """Synthetic data generator using LLM."""
 
-from typing import Any
 import json
+from typing import Any
 
 from rag.evaluation.evaluator import EvalGroundTruth
 
@@ -109,7 +109,7 @@ class SyntheticDataGenerator:
         """基于规则的简单生成"""
         # 简单实现：从内容中提取关键词生成问题
         words = chunk_content.split()
-        key_terms = [w for w in words if len(w) > 4][:5]
+        _key_terms = [w for w in words if len(w) > 4][:5]
 
         return EvalGroundTruth(
             query_id=f"rule_{hash(chunk_content[:20]) & 0xFFFFFFFF}",

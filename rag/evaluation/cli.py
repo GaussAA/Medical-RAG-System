@@ -11,8 +11,8 @@ from rich.console import Console
 from rich.table import Table
 
 from rag.evaluation import RetrievalEvaluator
-from rag.evaluation.benchmark_runner import BenchmarkRunner, BenchmarkConfig
-
+from rag.evaluation.benchmark_runner import BenchmarkConfig, BenchmarkRunner
+from rag.evaluation.retrieval_eval import RetrievalMetrics
 
 app = typer.Typer(help="Medical RAG Evaluation CLI")
 console = Console()
@@ -28,6 +28,7 @@ def evaluate_command(
     This performs retrieval-only evaluation since generation and medical safety
     evaluation require a full QueryResponse from the RAG engine.
     """
+
     async def _run() -> None:
         console.print(f"[bold]Query:[/bold] {query}")
         console.print(f"[bold]Expected:[/bold] {expected}")
@@ -82,28 +83,33 @@ def benchmark_command(
     generation and medical safety metrics requires integration with the RAG engine.
     Use BenchmarkRunner for comprehensive evaluation.
     """
+
     async def _run() -> None:
         # Initialize BenchmarkRunner for proper benchmark execution
-        runner = BenchmarkRunner(config=BenchmarkConfig(
-            dataset_path=str(dataset),
-            output_dir=str(output.parent) if output else "data/evaluation/reports",
-        ))
+        _runner = BenchmarkRunner(
+            config=BenchmarkConfig(
+                dataset_path=str(dataset),
+                output_dir=str(output.parent) if output else "data/evaluation/reports",
+            )
+        )
 
         # Load JSONL data
         with open(dataset) as f:
             lines = f.read().splitlines()
 
-        queries_data = []
+        queries_data: list[dict[str, Any]] = []
         for line in lines:
             if line.strip():
                 item = json.loads(line)
-                queries_data.append({
-                    "query_id": item.get("query_id", f"bench-{len(queries_data)}"),
-                    "query_text": item["query"],
-                    "relevant_doc_ids": item.get("relevant_doc_ids", []),
-                    "retrieved_doc_ids": item.get("retrieved_doc_ids", []),
-                    "expected_answer": item.get("expected_answer", ""),
-                })
+                queries_data.append(
+                    {
+                        "query_id": item.get("query_id", f"bench-{len(queries_data)}"),
+                        "query_text": item["query"],
+                        "relevant_doc_ids": item.get("relevant_doc_ids", []),
+                        "retrieved_doc_ids": item.get("retrieved_doc_ids", []),
+                        "expected_answer": item.get("expected_answer", ""),
+                    }
+                )
 
         ret_eval = RetrievalEvaluator(k_values=[5, 10, 20])
         results = []
@@ -120,16 +126,19 @@ def benchmark_command(
                 )
                 retrieval_score = (metrics.mrr + metrics.hit_rate) / 2
             else:
-                metrics = ret_eval.evaluate_without_ground_truth(retrieved_ids or [], min_relevant=1)
-                retrieval_score = metrics["hit_rate"]
+                raw_metrics = ret_eval.evaluate_without_ground_truth(retrieved_ids or [], min_relevant=1)
+                metrics = RetrievalMetrics(hit_rate=raw_metrics["hit_rate"])
+                retrieval_score = metrics.hit_rate
 
-            results.append({
-                "query": query,
-                "query_id": item["query_id"],
-                "retrieval_score": retrieval_score,
-                "hit_rate": metrics.hit_rate if hasattr(metrics, "hit_rate") else metrics.get("hit_rate", 0),
-                "mrr": metrics.mrr if hasattr(metrics, "mrr") else 0,
-            })
+            results.append(
+                {
+                    "query": query,
+                    "query_id": item["query_id"],
+                    "retrieval_score": retrieval_score,
+                    "hit_rate": metrics.hit_rate,
+                    "mrr": metrics.mrr,
+                }
+            )
 
         _print_results(results)
 

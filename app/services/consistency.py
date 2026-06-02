@@ -50,13 +50,10 @@ class ConsistencyChecker:
             total_chunks = doc.total_chunks or 0
 
             expected_chunk_ids = set(
-                str(uuid_lib.uuid5(uuid_lib.NAMESPACE_DNS, f"{doc_id}_{i}"))
-                for i in range(total_chunks)
+                str(uuid_lib.uuid5(uuid_lib.NAMESPACE_DNS, f"{doc_id}_{i}")) for i in range(total_chunks)
             )
 
-            _pg_chunks_result, pg_chunk_count = await self.store.get_chunks(
-                doc_id, page=1, page_size=10000
-            )
+            _pg_chunks_result, pg_chunk_count = await self.store.get_chunks(doc_id, page=1, page_size=10000)
 
             qdrant_count = await self._count_in_qdrant(doc_id)
             bm25_count = self._count_in_bm25(doc_id)
@@ -217,7 +214,7 @@ class ConsistencyChecker:
             if orphaned_point_ids:
                 qdrant_client.delete(
                     collection_name=settings.database.qdrant.collection,
-                    points_selector=PointIdsList(points=orphaned_point_ids),
+                    points_selector=PointIdsList(points=orphaned_point_ids),  # type: ignore[arg-type]
                 )
                 cleaned_qdrant = len(orphaned_point_ids)
                 logger.info(f"Cleaned {cleaned_qdrant} orphaned entries from Qdrant")

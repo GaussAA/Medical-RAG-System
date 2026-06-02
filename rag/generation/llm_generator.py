@@ -1,12 +1,17 @@
 from typing import Any
 
 from openai import AsyncOpenAI
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from app.models.schemas import RetrievedNode
+from app.services.citation_verifier import CitationVerifier
 from config.settings import get_settings
 from rag.generation.prompt_builder import PromptBuilder
-from app.services.citation_verifier import CitationVerifier
 
 
 class LLMGenerator:

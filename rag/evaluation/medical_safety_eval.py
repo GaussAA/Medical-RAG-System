@@ -25,18 +25,47 @@ class MedicalSafetyEvaluator:
 
     # Medical entity patterns
     DRUG_PATTERNS = [
-        "药物", "药品", "用药", "剂量", "服药", "吃药",
-        "mg", "ml", "毫克", "毫升", "每次", "每日", "口服",
+        "药物",
+        "药品",
+        "用药",
+        "剂量",
+        "服药",
+        "吃药",
+        "mg",
+        "ml",
+        "毫克",
+        "毫升",
+        "每次",
+        "每日",
+        "口服",
     ]
 
     DISEASE_PATTERNS = [
-        "诊断", "确诊", "疾病", "病名", "症状", "并发症",
-        "高血压", "糖尿病", "肿瘤", "癌症", "感染",
+        "诊断",
+        "确诊",
+        "疾病",
+        "病名",
+        "症状",
+        "并发症",
+        "高血压",
+        "糖尿病",
+        "肿瘤",
+        "癌症",
+        "感染",
     ]
 
     PROCEDURE_PATTERNS = [
-        "手术", "检查", "治疗方案", "手术方式", "麻醉",
-        "内镜", "穿刺", "造影", "CT", "MRI", "超声",
+        "手术",
+        "检查",
+        "治疗方案",
+        "手术方式",
+        "麻醉",
+        "内镜",
+        "穿刺",
+        "造影",
+        "CT",
+        "MRI",
+        "超声",
     ]
 
     # Warning trigger patterns
@@ -173,23 +202,17 @@ class MedicalSafetyEvaluator:
 
         # Medication warning check
         has_medication = any(kw in answer for kw in self.MEDICATION_WARNING_KEYWORDS)
-        has_med_warning = warnings and any(
-            w.type == "medication" for w in warnings if hasattr(w, "type")
-        )
+        has_med_warning = warnings and any(w.type == "medication" for w in warnings if hasattr(w, "type"))
         coverage["medication"] = has_medication == has_med_warning if warnings else has_medication
 
         # Diagnosis warning check
         has_diagnosis = any(kw in answer for kw in self.DIAGNOSIS_WARNING_KEYWORDS)
-        has_diag_warning = warnings and any(
-            w.type == "diagnosis" for w in warnings if hasattr(w, "type")
-        )
+        has_diag_warning = warnings and any(w.type == "diagnosis" for w in warnings if hasattr(w, "type"))
         coverage["diagnosis"] = has_diagnosis == has_diag_warning if warnings else has_diagnosis
 
         # Emergency warning check
         has_emergency = any(kw in answer for kw in self.EMERGENCY_WARNING_KEYWORDS)
-        has_emerg_warning = warnings and any(
-            w.type == "emergency" for w in warnings if hasattr(w, "type")
-        )
+        has_emerg_warning = warnings and any(w.type == "emergency" for w in warnings if hasattr(w, "type"))
         coverage["emergency"] = has_emergency == has_emerg_warning if warnings else has_emergency
 
         return coverage

@@ -110,8 +110,17 @@ DIFFICULTY_LEVELS = ["easy", "medium", "hard"]
 
 # 安全敏感标签
 SAFETY_SENSITIVE_QUERIES = {
-    "诊断标准", "治疗原则", "药物", "手术", "适应症", "禁忌症",
-    "MUMPP", "SMPP", "肺栓塞", "坏死性", "抗病毒"
+    "诊断标准",
+    "治疗原则",
+    "药物",
+    "手术",
+    "适应症",
+    "禁忌症",
+    "MUMPP",
+    "SMPP",
+    "肺栓塞",
+    "坏死性",
+    "抗病毒",
 }
 
 
@@ -131,7 +140,7 @@ def generate_answer(query: str, doc_name: str, docs: dict[str, str]) -> str:
     return f"关于{doc_name}中{query}的详细答案请参考原文。"
 
 
-def generate_dataset(count: int = 25, output: str = None) -> list[dict]:
+def generate_dataset(count: int = 25, output: str | None = None) -> list[dict]:
     """生成评测数据集"""
     dataset = []
 
@@ -190,9 +199,9 @@ def main():
 
     # 统计信息
     safety_count = sum(1 for e in dataset if e["safety_sensitive"])
-    print(f"\n数据集统计:")
+    print("\n数据集统计:")
     print(f"  - 总数量: {len(dataset)}")
-    print(f"  - 安全敏感问题: {safety_count} ({safety_count/len(dataset)*100:.1f}%)")
+    print(f"  - 安全敏感问题: {safety_count} ({safety_count / len(dataset) * 100:.1f}%)")
     print(f"  - 文档覆盖: {len(set(e['relevant_doc_ids'][0] for e in dataset))} 种")
 
 

@@ -1,17 +1,18 @@
 """Evaluation API routes."""
+
 import asyncio
 import json
 from pathlib import Path
 
-from loguru import logger
 from fastapi import APIRouter, Request
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.api.deps import RAGEngineDep
 from app.models.schemas import QueryRequest
-from rag.evaluation.evaluator import RAGEvaluator, EvalGroundTruth, RAGEvaluationResult
-from rag.generation.llm_generator import LLMGenerator
 from app.services.document_store import DocumentStore
+from rag.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
+from rag.generation.llm_generator import LLMGenerator
 
 router = APIRouter(prefix="/api/v1/evaluation", tags=["evaluation"])
 
@@ -35,7 +36,7 @@ class BenchmarkRequest(BaseModel):
 
 
 # Cache for document-title-to-chunk-IDs resolution (lazy loaded)
-_doc_title_to_chunk_ids: dict[str, list[str]] | None = None
+_doc_title_to_chunk_ids: dict[str, str] | None = None
 
 
 async def _resolve_relevant_doc_ids(doc_titles: list[str]) -> list[str]:
@@ -107,9 +108,7 @@ async def _save_result_to_disk(result_dict: dict) -> None:
                 lines = EVALUATION_HISTORY_PATH.read_text(encoding="utf-8").splitlines()
                 if len(lines) > MAX_HISTORY_ENTRIES:
                     trimmed = lines[-MAX_HISTORY_ENTRIES:]
-                    EVALUATION_HISTORY_PATH.write_text(
-                        "\n".join(trimmed) + "\n", encoding="utf-8"
-                    )
+                    EVALUATION_HISTORY_PATH.write_text("\n".join(trimmed) + "\n", encoding="utf-8")
                     logger.info(f"Trimmed evaluation history to {MAX_HISTORY_ENTRIES} entries")
 
         except Exception as e:
@@ -121,7 +120,7 @@ def _load_history_from_disk() -> list[RAGEvaluationResult]:
     results = []
     try:
         if EVALUATION_HISTORY_PATH.exists():
-            with open(EVALUATION_HISTORY_PATH, "r", encoding="utf-8") as f:
+            with open(EVALUATION_HISTORY_PATH, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -230,7 +229,7 @@ async def _process_single_benchmark_item(
         query_req = QueryRequest(question=query)
         rag_response = await asyncio.wait_for(
             rag_engine.query(query_req, session_manager),
-            timeout=60.0  # 60s per query timeout
+            timeout=60.0,  # 60s per query timeout
         )
 
         # Evaluate
@@ -241,7 +240,7 @@ async def _process_single_benchmark_item(
             ground_truth=ground_truth,
         )
         return result
-    except asyncio.TimeoutError:
+    except TimeoutError:
         # Return a placeholder on timeout
         return RAGEvaluationResult(
             query_id=query[:50],

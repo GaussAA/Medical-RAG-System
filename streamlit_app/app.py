@@ -3,8 +3,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import streamlit as st
+from typing import Literal, cast
+
 import requests
+import streamlit as st
 
 from config.settings import get_settings
 
@@ -13,7 +15,7 @@ settings = get_settings()
 st.set_page_config(
     page_title=settings.streamlit.page_title,
     page_icon=settings.streamlit.page_icon,
-    initial_sidebar_state=settings.streamlit.initial_sidebar_state,
+    initial_sidebar_state=cast(Literal["auto", "expanded", "collapsed"], settings.streamlit.initial_sidebar_state),
 )
 
 # Initialize session state

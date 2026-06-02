@@ -1,12 +1,22 @@
 import asyncio
 import time
+from collections.abc import AsyncGenerator
 from contextvars import ContextVar
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from loguru import logger
 
 from app.core.confidence import ConfidenceEvaluator
-from app.core.metrics import ACTIVE_QUERIES, ERROR_COUNT, GENERATION_LATENCY, LLM_TOKENS, QUERY_LATENCY, RETRIEVAL_COUNT, RETRIEVAL_LATENCY, RERANK_LATENCY
+from app.core.metrics import (
+    ACTIVE_QUERIES,
+    ERROR_COUNT,
+    GENERATION_LATENCY,
+    LLM_TOKENS,
+    QUERY_LATENCY,
+    RERANK_LATENCY,
+    RETRIEVAL_COUNT,
+    RETRIEVAL_LATENCY,
+)
 from app.core.safety import SafetyChecker
 from app.models.schemas import (
     QueryRequest,
@@ -150,9 +160,7 @@ class RAGEngine:
                 conversation_history = self._build_conversation_history(session)
 
             try:
-                llm_result = await self._generate_answer(
-                    sanitized_query, reranked_nodes, conversation_history
-                )
+                llm_result = await self._generate_answer(sanitized_query, reranked_nodes, conversation_history)
             except Exception as e:
                 logger.error(f"Generation error: {e}")
                 ERROR_COUNT.labels(error_type="generation").inc()
@@ -166,9 +174,7 @@ class RAGEngine:
                 usage = llm_result["usage"]
                 LLM_TOKENS.labels(token_type="prompt").inc(usage.get("prompt_tokens", 0))
                 LLM_TOKENS.labels(token_type="completion").inc(usage.get("completion_tokens", 0))
-            confidence_result = self._evaluate_confidence(
-                reranked_nodes, llm_result["answer"], sanitized_query
-            )
+            confidence_result = self._evaluate_confidence(reranked_nodes, llm_result["answer"], sanitized_query)
 
             # Extract and verify citations from the answer
             citations = []
@@ -182,26 +188,24 @@ class RAGEngine:
 
             warnings = []
             if self.config.generation.include_warnings:
-                warnings = self.warnings_generator.generate(
-                    llm_result["answer"], reranked_nodes, citations
-                )
+                warnings = self.warnings_generator.generate(llm_result["answer"], reranked_nodes, citations)
 
             processing_time = time.time() - start_time
             QUERY_LATENCY.observe(processing_time)
 
             # Add messages to session AFTER generation succeeds
             if session_manager and request.session_id:
-                await session_manager.add_message(
-                    request.session_id, "user", request.question
-                )
+                await session_manager.add_message(request.session_id, "user", request.question)
                 await session_manager.add_message(
                     request.session_id,
                     "assistant",
                     llm_result["answer"],
                     metadata={
                         "confidence": confidence_result.get("confidence"),
-                        "citations": [c.model_dump() if hasattr(c, 'model_dump') else c for c in llm_result.get("citations", [])],
-                        "warnings": [w.model_dump() if hasattr(w, 'model_dump') else w for w in warnings],
+                        "citations": [
+                            c.model_dump() if hasattr(c, "model_dump") else c for c in llm_result.get("citations", [])
+                        ],
+                        "warnings": [w.model_dump() if hasattr(w, "model_dump") else w for w in warnings],
                     },
                 )
 
@@ -376,9 +380,7 @@ class RAGEngine:
             # Stage 7: Persist messages
             stage_start = time.time()
             if session_manager and request.session_id:
-                await session_manager.add_message(
-                    request.session_id, "user", request.question
-                )
+                await session_manager.add_message(request.session_id, "user", request.question)
                 await session_manager.add_message(
                     request.session_id,
                     "assistant",
@@ -427,9 +429,7 @@ class RAGEngine:
         """Perform safety check on the query."""
         return self.safety_checker.check(request.question)
 
-    async def _retrieve_and_rerank(
-        self, query: str, filters: dict[str, Any] | None = None
-    ) -> list[RetrievedNode]:
+    async def _retrieve_and_rerank(self, query: str, filters: dict[str, Any] | None = None) -> list[RetrievedNode]:
         """Retrieve and rerank documents for the query.
 
         Implements GPU time-sharing: embedding uses GPU first, then reranker uses GPU.
@@ -458,7 +458,10 @@ class RAGEngine:
             filters=filters,
         )
         retrieval_elapsed = time.time() - t0
-        logger.info(f"  [_retrieve_and_rerank] vector+bm25 search: {retrieval_elapsed:.3f}s, got {len(retrieved_nodes)} nodes (embedding_on_gpu={embedding_on_gpu})")
+        logger.info(
+            f"  [_retrieve_and_rerank] vector+bm25 search: {retrieval_elapsed:.3f}s, "
+            f"got {len(retrieved_nodes)} nodes (embedding_on_gpu={embedding_on_gpu})"
+        )
 
         if not retrieved_nodes:
             # Even if no results, still need to release GPU memory
@@ -487,7 +490,10 @@ class RAGEngine:
             candidates=retrieved_nodes[: self.config.retrieval.final_top_k * 2],
         )
         rerank_elapsed = time.time() - t1
-        logger.info(f"  [_retrieve_and_rerank] rerank: {rerank_elapsed:.3f}s, got {len(reranked_nodes)} nodes (reranker_on_gpu={reranker_on_gpu})")
+        logger.info(
+            f"  [_retrieve_and_rerank] rerank: {rerank_elapsed:.3f}s, "
+            f"got {len(reranked_nodes)} nodes (reranker_on_gpu={reranker_on_gpu})"
+        )
 
         RETRIEVAL_LATENCY.observe(retrieval_elapsed)
         RERANK_LATENCY.observe(rerank_elapsed)
@@ -526,9 +532,7 @@ class RAGEngine:
         GENERATION_LATENCY.observe(time.time() - generation_start)
         return result
 
-    def _evaluate_confidence(
-        self, contexts: list[RetrievedNode], answer: str, query: str
-    ) -> dict[str, Any]:
+    def _evaluate_confidence(self, contexts: list[RetrievedNode], answer: str, query: str) -> dict[str, Any]:
         """Evaluate confidence of the answer."""
         return self.confidence_evaluator.evaluate(
             contexts=contexts,
@@ -545,10 +549,10 @@ class RAGEngine:
         """Thin wrapper delegating to WarningsGenerator for backward compatibility."""
         return self.warnings_generator.generate(answer, contexts, citations)
 
-    def _create_fallback_response(
-        self, session_id: str, fallback_type: str, processing_time: float
-    ) -> QueryResponse:
-        fallback = FALLBACK_RESPONSES.get(fallback_type, FALLBACK_RESPONSES["no_results"])
+    def _create_fallback_response(self, session_id: str, fallback_type: str, processing_time: float) -> QueryResponse:
+        fallback: dict[str, Any] = FALLBACK_RESPONSES.get(  # type: ignore[assignment]
+            fallback_type, FALLBACK_RESPONSES["no_results"]
+        )
 
         return QueryResponse(
             answer=fallback["answer"],
@@ -566,9 +570,7 @@ class RAGEngine:
             metadata={},
         )
 
-    def _create_error_response(
-        self, session_id: str, error: str, processing_time: float
-    ) -> QueryResponse:
+    def _create_error_response(self, session_id: str, error: str, processing_time: float) -> QueryResponse:
         return QueryResponse(
             answer=f"抱歉，处理您的请求时出现错误：{error}",
             confidence=0.0,

@@ -2,7 +2,12 @@
 from typing import Any
 
 from app.models.schemas import RetrievedNode
-from rag.generation.prompt import build_system_prompt, build_user_prompt, format_contexts, format_history_message
+from rag.generation.prompt import (
+    build_system_prompt,
+    build_user_prompt,
+    format_contexts,
+    format_history_message,
+)
 
 
 class PromptBuilder:
@@ -32,8 +37,5 @@ class PromptBuilder:
         """Format conversation history into a string."""
         if not history:
             return ""
-        lines = [
-            format_history_message(msg.get("role", ""), msg.get("content", ""))
-            for msg in history
-        ]
+        lines = [format_history_message(msg.get("role", ""), msg.get("content", "")) for msg in history]
         return "\n\n".join(lines)

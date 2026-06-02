@@ -56,9 +56,9 @@ def render_confidence_badge(confidence: float):
         color = "#dc3545"
         label = "不可靠"
 
+    style = f"background-color:{color};color:white;padding:8px 16px;border-radius:8px;font-size:16px;font-weight:bold;"
     st.markdown(
-        f'<span style="background-color:{color};color:white;padding:8px 16px;border-radius:8px;font-size:16px;font-weight:bold;">'
-        f"{label}: {confidence:.2f}</span>",
+        f'<span style="{style}">{label}: {confidence:.2f}</span>',
         unsafe_allow_html=True,
     )
 

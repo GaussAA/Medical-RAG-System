@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -34,9 +34,7 @@ class PostgreSQLConfig(BaseModel):
 
     @property
     def sync_url(self) -> str:
-        return (
-            f"postgresql://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
-        )
+        return f"postgresql://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
 
 
 class QdrantConfig(BaseModel):
@@ -140,9 +138,7 @@ class GenerationConfig(BaseModel):
     include_confidence: bool = True
     include_warnings: bool = True
     max_context_tokens: int = 4000
-    citation_verification: CitationVerificationConfig = Field(
-        default_factory=CitationVerificationConfig
-    )
+    citation_verification: CitationVerificationConfig = Field(default_factory=CitationVerificationConfig)
 
 
 class RAGConfig(BaseModel):
@@ -182,7 +178,12 @@ class CorsConfig(BaseModel):
     allow_origins: list[str] = ["http://localhost:8501", "http://localhost:3000"]
     allow_credentials: bool = True
     allow_methods: list[str] = ["GET", "POST", "PUT", "DELETE"]
-    allow_headers: list[str] = ["Authorization", "Content-Type", "X-Request-ID", "X-Trace-ID"]
+    allow_headers: list[str] = [
+        "Authorization",
+        "Content-Type",
+        "X-Request-ID",
+        "X-Trace-ID",
+    ]
 
 
 class StreamlitConfig(BaseModel):
@@ -255,7 +256,7 @@ def load_config(config_path: str | None = None) -> Settings:
     if not config_file.exists():
         return Settings()
 
-    with open(config_file, "r", encoding="utf-8") as f:
+    with open(config_file, encoding="utf-8") as f:
         config_data = yaml.safe_load(f)
 
     # Substitute environment variables
@@ -266,6 +267,7 @@ def load_config(config_path: str | None = None) -> Settings:
 
 _settings: Settings | None = None
 _settings_observers: list = []
+
 
 def _notify_settings_changed() -> None:
     """Notify all observers that settings have been reloaded."""

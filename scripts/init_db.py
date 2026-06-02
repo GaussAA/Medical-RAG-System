@@ -4,6 +4,7 @@ Database initialization script - recreates all tables
 Usage:
     uv run python scripts/init_db.py
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -58,15 +59,23 @@ async def init_db():
 
     print("\n[*] Verifying table structure...")
     async with factory() as session:
-        result = await session.execute(text("""
+        result = await session.execute(
+            text("""
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name
-        """))
+        """)
+        )
         tables = [row[0] for row in result.fetchall()]
 
-        expected_tables = ["documents", "chunks", "headings", "conversations", "messages"]
+        expected_tables = [
+            "documents",
+            "chunks",
+            "headings",
+            "conversations",
+            "messages",
+        ]
         for table in expected_tables:
             if table in tables:
                 print(f"  [+] {table}")

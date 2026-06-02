@@ -1,10 +1,16 @@
 """Tests for BenchmarkRunner hybrid mode."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from rag.evaluation.benchmark_runner import BenchmarkRunner, BenchmarkConfig, BenchmarkResult
-from rag.evaluation.evaluator import RAGEvaluator, RAGEvaluationResult, EvalGroundTruth
-from app.models.schemas import QueryResponse, Citation, RiskWarning
+
+from app.models.schemas import QueryResponse
+from rag.evaluation.benchmark_runner import (
+    BenchmarkConfig,
+    BenchmarkResult,
+    BenchmarkRunner,
+)
+from rag.evaluation.evaluator import RAGEvaluationResult, RAGEvaluator
 
 
 @pytest.fixture

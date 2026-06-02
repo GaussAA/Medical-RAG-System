@@ -1,8 +1,8 @@
 """CSV Exporter for evaluation results."""
 
 import csv
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 
 from rag.evaluation.evaluator import RAGEvaluationResult
 
@@ -16,31 +16,35 @@ class CSVReporter:
         writer = csv.writer(output)
 
         # Write header
-        writer.writerow([
-            "query_id",
-            "overall_score",
-            "mrr",
-            "retrieval_hit_rate",
-            "faithfulness",
-            "answer_relevancy",
-            "citation_accuracy",
-            "hallucination_ratio",
-            "safety_score",
-        ])
+        writer.writerow(
+            [
+                "query_id",
+                "overall_score",
+                "mrr",
+                "retrieval_hit_rate",
+                "faithfulness",
+                "answer_relevancy",
+                "citation_accuracy",
+                "hallucination_ratio",
+                "safety_score",
+            ]
+        )
 
         # Write data
         for r in results:
-            writer.writerow([
-                r.query_id,
-                f"{r.overall_score:.4f}",
-                f"{r.mrr:.4f}",
-                f"{r.retrieval_hit_rate:.4f}",
-                f"{r.faithfulness:.4f}",
-                f"{r.answer_relevancy:.4f}",
-                f"{r.citation_accuracy:.4f}",
-                f"{r.hallucination_ratio:.4f}",
-                f"{r.safety_score:.4f}",
-            ])
+            writer.writerow(
+                [
+                    r.query_id,
+                    f"{r.overall_score:.4f}",
+                    f"{r.mrr:.4f}",
+                    f"{r.retrieval_hit_rate:.4f}",
+                    f"{r.faithfulness:.4f}",
+                    f"{r.answer_relevancy:.4f}",
+                    f"{r.citation_accuracy:.4f}",
+                    f"{r.hallucination_ratio:.4f}",
+                    f"{r.safety_score:.4f}",
+                ]
+            )
 
         return output.getvalue()
 

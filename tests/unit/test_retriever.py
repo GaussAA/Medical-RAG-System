@@ -1,5 +1,6 @@
 import os
 import tempfile
+
 import pytest
 
 from app.models.schemas import RetrievedNode
@@ -97,7 +98,8 @@ class TestBM25Persistence:
 
             # Verify file was created with tokenized_corpus
             import json
-            with open(persist_path, "r", encoding="utf-8") as f:
+
+            with open(persist_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             assert "documents" in data

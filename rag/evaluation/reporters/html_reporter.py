@@ -1,11 +1,9 @@
 """HTML Report Generator with Plotly charts."""
 
-from pathlib import Path
-from typing import Any
 from datetime import datetime
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.express as px
+
+import plotly.express as px  # type: ignore[import-not-found]
+import plotly.graph_objects as go  # type: ignore[import-not-found]
 
 from rag.evaluation.evaluator import RAGEvaluationResult
 
@@ -39,12 +37,14 @@ class HTMLReporter:
             summary.get("safety_score", 0),
         ]
 
-        fig = go.Figure(data=go.Scatterpolar(
-            r=values + [values[0]],
-            theta=categories + [categories[0]],
-            fill="toself",
-            name="Score",
-        ))
+        fig = go.Figure(
+            data=go.Scatterpolar(
+                r=values + [values[0]],
+                theta=categories + [categories[0]],
+                fill="toself",
+                name="Score",
+            )
+        )
 
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
@@ -97,7 +97,7 @@ class HTMLReporter:
                     </tr>
                 </thead>
                 <tbody>
-                    {''.join(rows)}
+                    {"".join(rows)}
                 </tbody>
             </table>
         """
@@ -138,12 +138,12 @@ class HTMLReporter:
 </head>
 <body>
     <h1>Medical RAG Evaluation Report</h1>
-    <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+    <p>Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}</p>
 
     <div class="summary">
         <h2>Summary</h2>
-        <p>Total Queries: {summary.get('total', 0)}</p>
-        <p>Average Overall Score: {summary.get('avg_overall', 0):.4f}</p>
+        <p>Total Queries: {summary.get("total", 0)}</p>
+        <p>Average Overall Score: {summary.get("avg_overall", 0):.4f}</p>
     </div>
 
     <div class="section">

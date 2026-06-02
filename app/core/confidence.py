@@ -74,7 +74,8 @@ class ConfidenceEvaluator:
             return 0.0
 
         try:
-            import jieba
+            import jieba  # type: ignore[import-untyped]
+
             query_terms = set(jieba.cut(query.lower()))
             answer_terms = set(jieba.cut(answer.lower()))
         except ImportError:
@@ -83,7 +84,30 @@ class ConfidenceEvaluator:
             answer_terms = set(answer.lower().split())
 
         # Remove stop words
-        stop_words = {"的", "了", "是", "在", "和", "与", "或", "有", "我", "你", "他", "她", "它", "什么", "如何", "怎么", "哪些", "哪个", "请", "问", "的", "了"}
+        stop_words = {
+            "的",
+            "了",
+            "是",
+            "在",
+            "和",
+            "与",
+            "或",
+            "有",
+            "我",
+            "你",
+            "他",
+            "她",
+            "它",
+            "什么",
+            "如何",
+            "怎么",
+            "哪些",
+            "哪个",
+            "请",
+            "问",
+            "的",
+            "了",
+        }
         query_terms = query_terms - stop_words
 
         if not query_terms:
@@ -100,7 +124,18 @@ class ConfidenceEvaluator:
             score = min(score + 0.1, 1.0)
 
         # Check if answer has medical content structure
-        medical_content_indicators = ["药物", "治疗", "剂量", "用法", "适应", "禁忌", "血压", "血糖", "糖尿病", "高血压"]
+        medical_content_indicators = [
+            "药物",
+            "治疗",
+            "剂量",
+            "用法",
+            "适应",
+            "禁忌",
+            "血压",
+            "血糖",
+            "糖尿病",
+            "高血压",
+        ]
         has_medical_structure = any(ind in answer for ind in medical_content_indicators)
         if has_medical_structure:
             score = min(score + 0.1, 1.0)
@@ -169,7 +204,11 @@ class ConfidenceEvaluator:
             "high": {"color": "#28a745", "label": "高置信度", "action": "可直接使用"},
             "medium": {"color": "#f0ad4e", "label": "中等置信度", "action": "建议核实"},
             "low": {"color": "#fd7e14", "label": "低置信度", "action": "需要补充信息"},
-            "unreliable": {"color": "#dc3545", "label": "不可靠", "action": "不建议使用"},
+            "unreliable": {
+                "color": "#dc3545",
+                "label": "不可靠",
+                "action": "不建议使用",
+            },
         }
 
         return display_info.get(level, display_info["unreliable"])

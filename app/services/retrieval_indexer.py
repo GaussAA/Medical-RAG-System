@@ -2,6 +2,7 @@ import uuid as uuid_lib
 from typing import Any
 
 from loguru import logger
+
 from rag.retrieval.hybrid_retriever import HybridRetriever
 
 
@@ -23,10 +24,7 @@ class RetrievalIndexer:
     async def delete_documents(self, doc_id: str, total_chunks: int) -> bool:
         """Delete documents from vector and BM25 indexes."""
         try:
-            chunk_ids = [
-                str(uuid_lib.uuid5(uuid_lib.NAMESPACE_DNS, f"{doc_id}_{i}"))
-                for i in range(total_chunks)
-            ]
+            chunk_ids = [str(uuid_lib.uuid5(uuid_lib.NAMESPACE_DNS, f"{doc_id}_{i}")) for i in range(total_chunks)]
             await self.hybrid_retriever.delete_documents(chunk_ids)
             logger.info(f"Deleted {len(chunk_ids)} chunks from index")
             return True
@@ -52,7 +50,9 @@ class RetrievalIndexer:
         """
         # Log warning about total_chunks being ignored but still pass for backward compat
         if total_chunks is not None and total_chunks > 0:
-            logger.info(f"delete_documents_atomic: total_chunks={total_chunks} passed but ignored, using doc_id filter instead")
+            logger.info(
+                f"delete_documents_atomic: total_chunks={total_chunks} passed but ignored, using doc_id filter instead"
+            )
 
         result = await self.hybrid_retriever.delete_documents_atomic(doc_id)
         result["chunk_ids"] = []  # Unknown since we use filter now
@@ -83,9 +83,10 @@ class RetrievalIndexer:
             }
         """
         from qdrant_client import QdrantClient
-        
+
         try:
             from config.settings import get_settings
+
             settings = get_settings()
             qdrant_client = QdrantClient(url=settings.database.qdrant.url)
         except Exception as e:
@@ -119,12 +120,14 @@ class RetrievalIndexer:
                 node_id = payload.get("node_id", str(point.id))
 
                 if content:
-                    nodes.append(RetrievedNode(
-                        node_id=node_id,
-                        content=content,
-                        score=1.0,
-                        metadata=payload,
-                    ))
+                    nodes.append(
+                        RetrievedNode(
+                            node_id=node_id,
+                            content=content,
+                            score=1.0,
+                            metadata=payload,
+                        )
+                    )
 
             # Clear existing BM25 and rebuild
             self.hybrid_retriever.bm25_retriever.clear()
@@ -136,8 +139,16 @@ class RetrievalIndexer:
             rebuilt_count = len(nodes)
             logger.info(f"BM25 rebuild complete: {rebuilt_count} documents")
 
-            return {"success": True, "documents_rebuilt": rebuilt_count, "errors": errors}
+            return {
+                "success": True,
+                "documents_rebuilt": rebuilt_count,
+                "errors": errors,
+            }
 
         except Exception as e:
             logger.error(f"Failed to rebuild BM25 from Qdrant: {e}")
-            return {"success": False, "documents_rebuilt": rebuilt_count, "errors": [str(e)]}
+            return {
+                "success": False,
+                "documents_rebuilt": rebuilt_count,
+                "errors": [str(e)],
+            }

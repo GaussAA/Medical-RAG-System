@@ -3,9 +3,9 @@
 Provides batch evaluation capabilities for RAG systems using benchmark datasets.
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
 import json
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,7 @@ import httpx
 from loguru import logger
 
 from app.models.schemas import QueryResponse
-from rag.evaluation.evaluator import RAGEvaluator, RAGEvaluationResult, EvalGroundTruth
+from rag.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
 
 
 @dataclass
@@ -127,7 +127,7 @@ class BenchmarkRunner:
         if not dataset_file.exists():
             raise FileNotFoundError(f"Dataset file not found: {path}")
 
-        with open(dataset_file, "r", encoding="utf-8") as f:
+        with open(dataset_file, encoding="utf-8") as f:
             data = json.load(f)
 
         ground_truths = []
@@ -190,8 +190,8 @@ class BenchmarkRunner:
             ground_truths = ground_truths[:sample_size]
             query_texts = query_texts[:sample_size]
         elif self.config.sample_size:
-            ground_truths = ground_truths[:self.config.sample_size]
-            query_texts = query_texts[:self.config.sample_size]
+            ground_truths = ground_truths[: self.config.sample_size]
+            query_texts = query_texts[: self.config.sample_size]
 
         dataset_name = Path(dataset_path or self.config.dataset_path).stem
         benchmark_id = f"benchmark_{dataset_name}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
@@ -230,10 +230,12 @@ class BenchmarkRunner:
                     logger.error(f"Failed to evaluate query {gt.query_id}: {e}")
                     result.failed_evaluations += 1
                     if self.config.include_failed_cases:
-                        result.failed_cases.append({
-                            "query_id": gt.query_id,
-                            "error": str(e),
-                        })
+                        result.failed_cases.append(
+                            {
+                                "query_id": gt.query_id,
+                                "error": str(e),
+                            }
+                        )
 
             result.results = eval_results
         else:
@@ -244,9 +246,7 @@ class BenchmarkRunner:
         # Calculate aggregated statistics
         self._calculate_statistics(result)
 
-        logger.info(
-            f"Benchmark completed: {result.successful_evaluations}/{result.total_queries} successful"
-        )
+        logger.info(f"Benchmark completed: {result.successful_evaluations}/{result.total_queries} successful")
 
         return result
 
@@ -286,9 +286,7 @@ class BenchmarkRunner:
                 query = queries[i] if i < len(queries) else ""
                 gt = ground_truths[i] if ground_truths and i < len(ground_truths) else None
                 retrieved_ids = (
-                    retrieved_doc_ids_list[i]
-                    if retrieved_doc_ids_list and i < len(retrieved_doc_ids_list)
-                    else None
+                    retrieved_doc_ids_list[i] if retrieved_doc_ids_list and i < len(retrieved_doc_ids_list) else None
                 )
 
                 eval_result = await evaluator.evaluate(
@@ -304,10 +302,16 @@ class BenchmarkRunner:
                 logger.error(f"Failed to evaluate query {i}: {e}")
                 result.failed_evaluations += 1
                 if self.config.include_failed_cases:
-                    result.failed_cases.append({
-                        "query_id": getattr(ground_truths[i] if ground_truths else None, "query_id", f"q_{i}"),
-                        "error": str(e),
-                    })
+                    result.failed_cases.append(
+                        {
+                            "query_id": getattr(
+                                ground_truths[i] if ground_truths else None,
+                                "query_id",
+                                f"q_{i}",
+                            ),
+                            "error": str(e),
+                        }
+                    )
 
         result.results = eval_results
 
@@ -384,26 +388,28 @@ class BenchmarkRunner:
                     # 无法获取响应
                     result.failed_evaluations += 1
                     if self.config.include_failed_cases:
-                        result.failed_cases.append({
-                            "query_id": query_id,
-                            "error": "No response available from API or fallback",
-                        })
+                        result.failed_cases.append(
+                            {
+                                "query_id": query_id,
+                                "error": "No response available from API or fallback",
+                            }
+                        )
 
             except Exception as e:
                 logger.error(f"Failed to evaluate query {query_id}: {e}")
                 result.failed_evaluations += 1
                 if self.config.include_failed_cases:
-                    result.failed_cases.append({
-                        "query_id": query_id,
-                        "error": str(e),
-                    })
+                    result.failed_cases.append(
+                        {
+                            "query_id": query_id,
+                            "error": str(e),
+                        }
+                    )
 
         # 计算聚合统计
         self._calculate_statistics(result)
 
-        logger.info(
-            f"Hybrid benchmark completed: {result.successful_evaluations}/{result.total_queries} successful"
-        )
+        logger.info(f"Hybrid benchmark completed: {result.successful_evaluations}/{result.total_queries} successful")
 
         return result
 
@@ -431,9 +437,7 @@ class BenchmarkRunner:
             logger.warning(f"RAG API call failed: {e}")
         return None
 
-    async def _load_fallback_response(
-        self, fallback_file: str, query_id: str
-    ) -> QueryResponse | None:
+    async def _load_fallback_response(self, fallback_file: str, query_id: str) -> QueryResponse | None:
         """
         从离线文件加载响应。
 
@@ -450,7 +454,7 @@ class BenchmarkRunner:
                 logger.warning(f"Fallback file not found: {fallback_file}")
                 return None
 
-            with open(fallback_path, "r", encoding="utf-8") as f:
+            with open(fallback_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # 支持两种格式：字典或字典列表

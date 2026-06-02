@@ -73,13 +73,9 @@ class RetrievalEvaluator:
 
             # NDCG@K
             if scores:
-                metrics.ndcg_at_k[k] = self._ndcg_at_k(
-                    retrieved_ids[:k], ground_truth_ids, scores[:k]
-                )
+                metrics.ndcg_at_k[k] = self._ndcg_at_k(retrieved_ids[:k], ground_truth_ids, scores[:k])
             else:
-                metrics.ndcg_at_k[k] = self._ndcg_at_k(
-                    retrieved_ids[:k], ground_truth_ids, [1.0] * k
-                )
+                metrics.ndcg_at_k[k] = self._ndcg_at_k(retrieved_ids[:k], ground_truth_ids, [1.0] * k)
 
         # MRR
         metrics.mrr = self._mrr(relevance)

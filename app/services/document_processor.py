@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Any
 
-from app.models.schemas import Chunk as SchemaChunk, ParsedDocument, RetrievedNode
+from app.models.schemas import Chunk as SchemaChunk
+from app.models.schemas import ParsedDocument, RetrievedNode
 from rag.chunking.hierarchical_chunker import HierarchicalChunker
 from rag.parser import parse_document, parse_document_with_headings
 

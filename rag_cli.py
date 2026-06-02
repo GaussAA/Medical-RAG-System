@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Medical RAG Evaluation CLI"""
 
-import typer
 from pathlib import Path
+
+import typer
 
 app = typer.Typer(
     name="rag-eval",
@@ -20,6 +21,7 @@ def evaluate(
 ):
     """单次查询评估"""
     from rag.evaluation.cli import evaluate_command
+
     typer.run(evaluate_command)
 
 
@@ -33,6 +35,7 @@ def benchmark(
 ):
     """批量基准测试"""
     from rag.evaluation.cli import benchmark_command
+
     typer.run(benchmark_command)
 
 
@@ -44,6 +47,7 @@ def dataset(
 ):
     """数据集管理"""
     from rag.evaluation.cli import dataset_command
+
     typer.run(dataset_command)
 
 
@@ -56,6 +60,7 @@ def compare(
 ):
     """A/B 版本对比"""
     from rag.evaluation.cli import compare_command
+
     typer.run(compare_command)
 
 

@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jieba
+import jieba  # type: ignore[import-untyped]
 from loguru import logger
-from rank_bm25 import BM25Plus
+from rank_bm25 import BM25Plus  # type: ignore[import-untyped]
 
 from app.models.schemas import RetrievedNode
 from rag.retrieval.base import BaseRetriever
@@ -32,7 +32,7 @@ class BM25Retriever(BaseRetriever):
             return
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
 
             self.documents = data.get("documents", [])
@@ -88,15 +88,15 @@ class BM25Retriever(BaseRetriever):
         except Exception as e:
             logger.warning(f"Failed to save BM25 index to {self.persist_path}: {e}")
 
-    async def retrieve(
-        self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None
-    ) -> list[RetrievedNode]:
+    async def retrieve(self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None) -> list[RetrievedNode]:
         if not self.bm25 or not self.corpus:
             return []
 
         loop = asyncio.get_running_loop()
         tokenized_query = await loop.run_in_executor(None, lambda: list(jieba.cut(query)))
-        scores = await loop.run_in_executor(None, lambda: self.bm25.get_scores(tokenized_query))
+        assert self.bm25 is not None
+        bm25 = self.bm25
+        scores = await loop.run_in_executor(None, lambda: bm25.get_scores(tokenized_query))
 
         scored_docs = list(enumerate(scores))
         loop = asyncio.get_running_loop()

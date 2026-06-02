@@ -8,9 +8,13 @@ venv/
 dist/
 build/
 
+# Python dev tools
+.pre-commit-config.yaml
+.mypy_cache/
+.ruff_cache/
+
 # Test & Coverage
 .pytest_cache/
-.ruff_cache/
 .coverage
 .coverage*
 coverage.json

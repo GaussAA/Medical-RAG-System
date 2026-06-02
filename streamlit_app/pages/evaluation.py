@@ -1,4 +1,5 @@
 """Evaluation page for RAG system assessment."""
+
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ def _load_document_titles() -> list[str]:
     except Exception:
         pass
     return []
+
 
 st.set_page_config(page_title="评估中心", page_icon="📊")
 st.title("📊 RAG 评估中心")
@@ -221,6 +223,7 @@ def run_benchmark():
                         # It's a file path, read the file
                         # Security: validate path is within allowed data directory
                         from pathlib import Path
+
                         safe_base = Path(__file__).parent.parent.parent / "data"
                         requested_path = Path(dataset_path.strip()).resolve()
                         try:
@@ -276,6 +279,7 @@ def view_history():
                 st.caption(f"共 {total} 条评估记录")
             with col_export:
                 import json as _json
+
                 json_bytes = _json.dumps(history, ensure_ascii=False, indent=2).encode("utf-8")
                 st.download_button(
                     label="📥 导出 JSON",

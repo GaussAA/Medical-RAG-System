@@ -1,6 +1,6 @@
 """Chat message rendering component."""
+
 import streamlit as st
-from datetime import datetime
 
 
 def render_message(role: str, content: str, metadata: dict | None = None):

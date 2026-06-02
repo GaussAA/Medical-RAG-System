@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from app.models.schemas import RetrievedNode
 from rag.reranker.cross_encoder import Reranker
@@ -10,7 +11,7 @@ class TestRerankerInit:
 
     def test_init_uses_defaults_from_settings(self):
         """Reranker should use settings when no args provided."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -52,7 +53,7 @@ class TestRerankerEnsureModelLoaded:
 
     def test_ensure_model_loaded_loads_model_to_cpu(self):
         """First access should load model to CPU."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -62,7 +63,7 @@ class TestRerankerEnsureModelLoaded:
             reranker = Reranker()
 
             mock_cross_encoder = MagicMock()
-            with patch('sentence_transformers.CrossEncoder', return_value=mock_cross_encoder):
+            with patch("sentence_transformers.CrossEncoder", return_value=mock_cross_encoder):
                 reranker._ensure_model_loaded()
 
             assert reranker.model is not None
@@ -71,7 +72,7 @@ class TestRerankerEnsureModelLoaded:
 
     def test_ensure_model_loaded_called_once(self):
         """Model should only be loaded once."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -91,7 +92,7 @@ class TestRerankerEnsureOnGpu:
 
     def test_ensure_on_gpu_returns_true_when_already_on_gpu(self):
         """If model already on GPU, should return True without reloading."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -108,7 +109,7 @@ class TestRerankerEnsureOnGpu:
 
     def test_ensure_on_gpu_loads_model_if_not_loaded(self):
         """Should call _ensure_model_loaded if model is None."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -126,7 +127,7 @@ class TestRerankerEnsureOnGpu:
 
     def test_ensure_on_gpu_insufficient_memory_returns_false(self):
         """Should return False when GPU memory is insufficient."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -141,7 +142,7 @@ class TestRerankerEnsureOnGpu:
             mock_gpu_manager = MagicMock()
             mock_gpu_manager.get_memory_info.return_value = {"free_mb": 1024}
 
-            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
+            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 result = reranker.ensure_on_gpu()
@@ -151,7 +152,7 @@ class TestRerankerEnsureOnGpu:
 
     def test_ensure_on_gpu_successful_migration(self):
         """Should successfully migrate model to GPU."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -166,7 +167,7 @@ class TestRerankerEnsureOnGpu:
             mock_gpu_manager = MagicMock()
             mock_gpu_manager.get_memory_info.return_value = {"free_mb": 8192}
 
-            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
+            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 result = reranker.ensure_on_gpu()
@@ -192,7 +193,7 @@ class TestRerankerMoveToCpu:
 
     def test_move_to_cpu_migrates_model_to_cpu(self):
         """Should migrate model from GPU to CPU."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -206,7 +207,7 @@ class TestRerankerMoveToCpu:
 
             mock_gpu_manager = MagicMock()
 
-            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
+            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
                 result = reranker.move_to_cpu()
@@ -219,7 +220,7 @@ class TestRerankerMoveToCpu:
 
     def test_move_to_cpu_clears_cuda_cache(self):
         """Should clear CUDA cache after moving to CPU."""
-        with patch('rag.reranker.cross_encoder.get_settings') as mock_settings:
+        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -233,10 +234,10 @@ class TestRerankerMoveToCpu:
 
             mock_gpu_manager = MagicMock()
 
-            with patch('rag.reranker.cross_encoder.GPUMemoryManager') as mock_gpum:
+            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
                 mock_gpum.get_instance.return_value = mock_gpu_manager
 
-                with patch('torch.cuda.empty_cache') as mock_clear:
+                with patch("torch.cuda.empty_cache") as mock_clear:
                     reranker.move_to_cpu()
 
                     mock_clear.assert_called_once()
@@ -392,6 +393,7 @@ class TestRerankerNormalizeScores:
         reranker = Reranker(model_name="test-model")
 
         import numpy as np
+
         scores = np.array([0.3, 0.6, 0.9])
 
         result = reranker._normalize_scores(scores)
@@ -403,6 +405,7 @@ class TestRerankerNormalizeScores:
         reranker = Reranker(model_name="test-model")
 
         import torch
+
         scores = torch.tensor([0.3, 0.6, 0.9])
 
         result = reranker._normalize_scores(scores)
@@ -417,7 +420,7 @@ class TestRerankerGetDevice:
         """Should return 'cuda' when torch.cuda.is_available is True."""
         reranker = Reranker(model_name="test-model")
 
-        with patch('torch.cuda.is_available', return_value=True):
+        with patch("torch.cuda.is_available", return_value=True):
             result = reranker.get_device()
             assert result == "cuda"
 
@@ -425,6 +428,6 @@ class TestRerankerGetDevice:
         """Should return 'cpu' when torch.cuda.is_available is False."""
         reranker = Reranker(model_name="test-model")
 
-        with patch('torch.cuda.is_available', return_value=False):
+        with patch("torch.cuda.is_available", return_value=False):
             result = reranker.get_device()
             assert result == "cpu"

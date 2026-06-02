@@ -1,10 +1,10 @@
 from rag.generation.prompt import (
+    SYSTEM_PROMPT,
+    _sanitize_content,
     build_system_prompt,
     build_user_prompt,
     format_contexts,
-    _sanitize_content,
     format_history_message,
-    SYSTEM_PROMPT,
 )
 
 
@@ -118,9 +118,7 @@ class TestFormatContexts:
 
     def test_content_exceeds_500_chars_truncated(self):
         long_content = "A" * 600
-        contexts = [
-            {"content": long_content, "source": "test.pdf"}
-        ]
+        contexts = [{"content": long_content, "source": "test.pdf"}]
         result = format_contexts(contexts)
         assert "..." in result
         assert "A" * 500 + "..." in result
@@ -129,9 +127,7 @@ class TestFormatContexts:
 
     def test_content_exactly_500_chars_not_truncated(self):
         exact_content = "B" * 500
-        contexts = [
-            {"content": exact_content, "source": "test.pdf"}
-        ]
+        contexts = [{"content": exact_content, "source": "test.pdf"}]
         result = format_contexts(contexts)
         # Should not have trailing "..."
         assert exact_content in result
@@ -139,17 +135,13 @@ class TestFormatContexts:
 
     def test_content_under_500_chars_not_truncated(self):
         short_content = "短内容"
-        contexts = [
-            {"content": short_content, "source": "test.pdf"}
-        ]
+        contexts = [{"content": short_content, "source": "test.pdf"}]
         result = format_contexts(contexts)
         assert short_content in result
         assert "短内容..." not in result
 
     def test_missing_source_defaults_to_unknown(self):
-        contexts = [
-            {"content": "一些内容"}
-        ]
+        contexts = [{"content": "一些内容"}]
         result = format_contexts(contexts)
         assert "未知来源" in result
 
@@ -181,9 +173,7 @@ class TestFormatContexts:
 
     def test_content_at_501_chars_truncated(self):
         content_501 = "C" * 501
-        contexts = [
-            {"content": content_501, "source": "test.pdf"}
-        ]
+        contexts = [{"content": content_501, "source": "test.pdf"}]
         result = format_contexts(contexts)
         assert content_501[:500] + "..." in result
 

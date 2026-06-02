@@ -1,15 +1,16 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-
 from sqlalchemy import select
 
 from app.core.database import get_session_factory
 from app.models.database import Conversation, Message
-from app.models.schemas import ConversationSession, Message as MessageSchema
+from app.models.schemas import ConversationSession
+from app.models.schemas import Message as MessageSchema
 
 
 class DeleteResponse(BaseModel):
     message: str
+
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["sessions"])
 
@@ -29,9 +30,7 @@ async def list_sessions(
     """从数据库直接读取会话列表（包含所有会话，用于历史页面）"""
     factory = get_session_factory()
     async with factory() as session:
-        result = await session.execute(
-            select(Conversation).order_by(Conversation.updated_at.desc())
-        )
+        result = await session.execute(select(Conversation).order_by(Conversation.updated_at.desc()))
         conversations = result.scalars().all()
 
         sessions = []
@@ -63,17 +62,13 @@ async def get_session_messages(
     factory = get_session_factory()
     async with factory() as session:
         result = await session.execute(
-            select(Message)
-            .where(Message.session_id == uuid.UUID(session_id))
-            .order_by(Message.created_at)
+            select(Message).where(Message.session_id == uuid.UUID(session_id)).order_by(Message.created_at)
         )
         messages = result.scalars().all()
 
         if not messages:
             # 检查会话是否存在
-            conv_result = await session.execute(
-                select(Conversation).where(Conversation.id == uuid.UUID(session_id))
-            )
+            conv_result = await session.execute(select(Conversation).where(Conversation.id == uuid.UUID(session_id)))
             if not conv_result.scalar_one_or_none():
                 raise HTTPException(status_code=404, detail="Session not found")
 

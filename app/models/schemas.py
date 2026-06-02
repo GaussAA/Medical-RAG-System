@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
-from pydantic import computed_field
 
 from pydantic import BaseModel, Field
 
@@ -42,6 +42,7 @@ class ChunkMetadata(BaseModel):
     char_count: int = 0
     position: int = 0
     heading_level: int | None = None  # H1=1, H2=2, ... H6=6 for Markdown chunks
+    page_number: int | None = None
 
 
 class Chunk(BaseModel):
@@ -55,6 +56,7 @@ class Chunk(BaseModel):
 
 class RetrievedNode(BaseModel):
     """Unified node type for both retrieved and reranked results."""
+
     node_id: str
     content: str
     score: float
@@ -66,9 +68,7 @@ class RetrievedNode(BaseModel):
 RerankedNode = RetrievedNode
 
 
-from enum import Enum
-
-class CitationPosition(str, Enum):
+class CitationPosition(StrEnum):
     DIRECT = "direct"
     INDIRECT = "indirect"
     PARAPHRASED = "paraphrased"
@@ -259,6 +259,7 @@ class ConversationSession(BaseModel):
 
 class BatchUploadItem(BaseModel):
     """Single file item in a batch upload response."""
+
     document_id: str
     file_name: str
     status: str  # "processing" | "completed" | "failed" | "duplicate"
@@ -267,6 +268,7 @@ class BatchUploadItem(BaseModel):
 
 class BatchUploadResponse(BaseModel):
     """Response for batch upload endpoint."""
+
     batch_id: str
     total: int
     succeeded: int
@@ -278,6 +280,7 @@ class BatchUploadResponse(BaseModel):
 
 class BatchUploadStatus(BaseModel):
     """Real-time status of a batch upload operation."""
+
     batch_id: str
     total: int
     processing: int = 0

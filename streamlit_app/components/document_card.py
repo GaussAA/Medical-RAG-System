@@ -1,6 +1,8 @@
 """Document card component for displaying document info."""
+
+from typing import Any
+
 import streamlit as st
-from datetime import datetime
 
 
 def render_document_card(
@@ -33,9 +35,9 @@ def render_document_card(
     # Selection checkbox
     with col_select:
         if on_select_key:
-            selected = st.checkbox("", key=on_select_key, label_visibility="collapsed")
+            _selected = st.checkbox("", key=on_select_key, label_visibility="collapsed")
         else:
-            selected = False
+            _selected = False
 
     # Document info
     with col1:
@@ -80,8 +82,10 @@ def _render_status_badge(status: str):
     st.markdown(f":{color}[{label}]")
 
 
-def _get_file_icon(file_type: str | None) -> str:
+def _get_file_icon(file_type: str | None = None) -> str:
     """Get icon for file type."""
+    if file_type is None:
+        file_type = ""
     icon_map = {
         "pdf": "📕",
         "docx": "📘",
@@ -100,7 +104,7 @@ def render_document_stats(documents: list[dict]) -> dict:
     Returns:
         Dict with stats: total, by_status, by_type
     """
-    stats = {
+    stats: dict[str, Any] = {
         "total": len(documents),
         "by_status": {},
         "by_type": {},

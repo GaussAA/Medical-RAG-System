@@ -1,13 +1,14 @@
 import uuid
-from datetime import datetime, UTC
-from loguru import logger
+from datetime import UTC, datetime
 
+from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session_factory
 from app.models.database import Conversation, Message
-from app.models.schemas import ConversationSession, Message as MessageSchema
+from app.models.schemas import ConversationSession
+from app.models.schemas import Message as MessageSchema
 from rag.generation.prompt import format_history_message
 
 
@@ -102,9 +103,7 @@ class SessionManager:
 
         if not session_obj:
             # 尝试从数据库加载该session
-            result = await session.execute(
-                select(Conversation).where(Conversation.id == session_uuid)
-            )
+            result = await session.execute(select(Conversation).where(Conversation.id == session_uuid))
             conv = result.scalar_one_or_none()
             if conv:
                 session_obj = ConversationSession(
@@ -200,11 +199,7 @@ class SessionManager:
         if evicted_ids:
             try:
                 uuids = [uuid.UUID(mid) for mid in evicted_ids]
-                await session.execute(
-                    update(Message)
-                    .where(Message.id.in_(uuids))
-                    .values(extra_data={"evicted": True})
-                )
+                await session.execute(update(Message).where(Message.id.in_(uuids)).values(extra_data={"evicted": True}))
                 await session.commit()
             except Exception as e:
                 logger.warning(f"Failed to mark messages as evicted: {e}")
@@ -212,7 +207,7 @@ class SessionManager:
         # Remove evicted messages from session object
         if evicted_ids:
             # Remove from the beginning (oldest pairs)
-            session_obj.messages = session_obj.messages[len(evicted_ids):]
+            session_obj.messages = session_obj.messages[len(evicted_ids) :]
             # Sync msg_count with actual message list length after eviction
             session_obj.msg_count = len(session_obj.messages)
 
@@ -241,9 +236,7 @@ class SessionManager:
             from sqlalchemy import delete
 
             try:
-                result = await session.execute(
-                    delete(Conversation).where(Conversation.id == session_uuid)
-                )
+                result = await session.execute(delete(Conversation).where(Conversation.id == session_uuid))
                 await session.commit()
                 # rowcount may not be reliable for all DB drivers in async context
                 rowcount = getattr(result, "rowcount", 0)
@@ -295,9 +288,7 @@ class SessionManager:
             session_uuid = uuid.UUID(session_id)
 
             messages_result = await session.execute(
-                select(Message)
-                .where(Message.session_id == session_uuid)
-                .order_by(Message.created_at)
+                select(Message).where(Message.session_id == session_uuid).order_by(Message.created_at)
             )
             session_obj.messages = [
                 MessageSchema(
@@ -336,9 +327,7 @@ class SessionManager:
 
         return context
 
-    def _filter_relevant_history(
-        self, current_query: str, messages: list[MessageSchema]
-    ) -> list[MessageSchema]:
+    def _filter_relevant_history(self, current_query: str, messages: list[MessageSchema]) -> list[MessageSchema]:
         if not messages:
             return []
 

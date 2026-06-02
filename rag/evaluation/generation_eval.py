@@ -126,7 +126,7 @@ Output in JSON format:
         if not self.llm_generator or not contexts:
             return 0.0
 
-        context_combined = "\n\n".join(f"[Context {i+1}]: {ctx}" for i, ctx in enumerate(contexts))
+        context_combined = "\n\n".join(f"[Context {i + 1}]: {ctx}" for i, ctx in enumerate(contexts))
 
         # Use string replacement to avoid JSON curly braces being interpreted as format placeholders
         prompt = self.FAITHFULNESS_PROMPT
@@ -136,9 +136,7 @@ Output in JSON format:
             result = await self.llm_generator.generate(
                 query="Evaluate faithfulness",
                 contexts=[],
-                conversation_history=[
-                    {"role": "user", "content": prompt}
-                ],
+                conversation_history=[{"role": "user", "content": prompt}],
             )
 
             # Parse JSON response
@@ -148,15 +146,16 @@ Output in JSON format:
             # Try to extract JSON from response with robust parsing
             try:
                 import re
+
                 # Extract JSON by finding outermost braces (handles nested JSON)
-                start_idx = response_text.find('{')
-                end_idx = response_text.rfind('}')
+                start_idx = response_text.find("{")
+                end_idx = response_text.rfind("}")
                 if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
-                    json_str = response_text[start_idx:end_idx + 1]
+                    json_str = response_text[start_idx : end_idx + 1]
                     # Clean up trailing commas before ] or }
-                    json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+                    json_str = re.sub(r",(\s*[}\]])", r"\1", json_str)
                     # Also fix possible double-escaped quotes
-                    json_str = json_str.replace('\\"', '"').replace('"{', '{').replace('}"', '}')
+                    json_str = json_str.replace('\\"', '"').replace('"{', "{").replace('}"', "}")
                     parsed = json.loads(json_str)
                     score = parsed.get("faithfulness_score", 0.5)
                     return float(min(max(score, 0.0), 1.0))
@@ -183,15 +182,25 @@ Output in JSON format:
 
         # Check 1: Key medical terms from contexts appear in answer
         medical_indicators = [
-            "mg", "剂量", "药物", "治疗", "诊断", "患者",
-            "血压", "血糖", "药物", "服用", "用法", "疗程",
-            "禁忌", "不良反应", "适应症", "并发症",
+            "mg",
+            "剂量",
+            "药物",
+            "治疗",
+            "诊断",
+            "患者",
+            "血压",
+            "血糖",
+            "药物",
+            "服用",
+            "用法",
+            "疗程",
+            "禁忌",
+            "不良反应",
+            "适应症",
+            "并发症",
         ]
 
-        matching_indicators = sum(
-            1 for ind in medical_indicators
-            if ind in context_text and ind in answer_lower
-        )
+        matching_indicators = sum(1 for ind in medical_indicators if ind in context_text and ind in answer_lower)
 
         # Check 2: Citation markers present in answer
         citation_markers = ["来源", "「", "」", "#"]
@@ -239,9 +248,7 @@ Output in JSON format:
             result = await self.llm_generator.generate(
                 query="Evaluate relevancy",
                 contexts=[],
-                conversation_history=[
-                    {"role": "user", "content": prompt}
-                ],
+                conversation_history=[{"role": "user", "content": prompt}],
             )
 
             import json
@@ -251,7 +258,7 @@ Output in JSON format:
                 if "```json" in response_text:
                     json_str = response_text.split("```json")[1].split("```")[0]
                 elif "{" in response_text:
-                    json_str = response_text[response_text.index("{"): response_text.rindex("}") + 1]
+                    json_str = response_text[response_text.index("{") : response_text.rindex("}") + 1]
                 else:
                     return 0.5
 
@@ -279,7 +286,26 @@ Output in JSON format:
         answer_terms = set(answer.lower().split())
 
         # Remove common stop words
-        stop_words = {"的", "了", "是", "在", "和", "与", "或", "有", "我", "你", "他", "她", "它", "什么", "如何", "怎么", "哪些", "哪个"}
+        stop_words = {
+            "的",
+            "了",
+            "是",
+            "在",
+            "和",
+            "与",
+            "或",
+            "有",
+            "我",
+            "你",
+            "他",
+            "她",
+            "它",
+            "什么",
+            "如何",
+            "怎么",
+            "哪些",
+            "哪个",
+        }
         query_terms = query_terms - stop_words
 
         if not query_terms:
@@ -312,7 +338,16 @@ Output in JSON format:
         if not contexts:
             return 0.0
 
-        query_terms = set(query.lower().split()) - {"的", "了", "是", "在", "和", "与", "或", "有"}
+        query_terms = set(query.lower().split()) - {
+            "的",
+            "了",
+            "是",
+            "在",
+            "和",
+            "与",
+            "或",
+            "有",
+        }
 
         precision_scores = []
         for ctx in contexts:

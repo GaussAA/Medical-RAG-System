@@ -94,7 +94,8 @@ def format_contexts(contexts: list[dict]) -> str:
 def _sanitize_content(content: str) -> str:
     """Remove markdown special characters to prevent prompt injection."""
     import re
-    return re.sub(r'[*#\[\]()`\\]', '', content)
+
+    return re.sub(r"[*#\[\]()`\\]", "", content)
 
 
 def format_history_message(role: str, content: str) -> str:

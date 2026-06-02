@@ -6,7 +6,8 @@ from typing import Any
 from loguru import logger
 
 from app.core.rag_engine import RAGEngine
-from app.models.schemas import Chunk as SchemaChunk, DocumentStatus
+from app.models.schemas import Chunk as SchemaChunk
+from app.models.schemas import DocumentStatus
 from app.services.document_processor import DocumentProcessor
 from app.services.document_store import DocumentStore
 from app.services.retrieval_indexer import RetrievalIndexer
@@ -228,9 +229,7 @@ class DocumentService:
             logger.warning(f"delete_document: doc {doc_id} not found in documents")
             return False
 
-        logger.info(
-            f"delete_document: found doc {doc_id} with total_chunks={doc.get('total_chunks')}"
-        )
+        logger.info(f"delete_document: found doc {doc_id} with total_chunks={doc.get('total_chunks')}")
 
         # Handle None total_chunks - try to get from database or use 0
         total_chunks = doc.get("total_chunks")
@@ -289,8 +288,7 @@ class DocumentService:
         # STEP 7: Return status - note if there was index inconsistency
         if not index_result["success"]:
             logger.warning(
-                f"Document {doc_id} deleted but index inconsistency detected. "
-                f"Run consistency check to repair."
+                f"Document {doc_id} deleted but index inconsistency detected. Run consistency check to repair."
             )
 
         return True

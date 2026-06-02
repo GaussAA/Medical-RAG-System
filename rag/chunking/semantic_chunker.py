@@ -114,7 +114,10 @@ class SemanticChunker(BaseChunker):
                     chunk_text = "\n".join(current_content)
                     chunks.append(
                         create_chunk(
-                            chunk_text, current_heading, current_heading_level, current_position
+                            chunk_text,
+                            current_heading,
+                            current_heading_level,
+                            current_position,
                         )
                     )
                     current_position += 1
@@ -128,9 +131,7 @@ class SemanticChunker(BaseChunker):
         # Don't forget the last chunk
         if current_content:
             chunk_text = "\n".join(current_content)
-            chunks.append(
-                create_chunk(chunk_text, current_heading, current_heading_level, current_position)
-            )
+            chunks.append(create_chunk(chunk_text, current_heading, current_heading_level, current_position))
 
         return chunks
 
@@ -163,7 +164,7 @@ class SemanticChunker(BaseChunker):
         tables = metadata.get("tables", [])
 
         text_parts = text.split("\n\n")
-        current_text_parts = []
+        current_text_parts: list[str] = []
 
         for part in text_parts:
             if self._contains_table(part, tables):
@@ -205,9 +206,7 @@ class SemanticChunker(BaseChunker):
                 return True
         return False
 
-    def _create_table_chunk(
-        self, text: str, tables: list[dict], metadata: dict, position: int
-    ) -> Chunk | None:
+    def _create_table_chunk(self, text: str, tables: list[dict], metadata: dict, position: int) -> Chunk | None:
         for table in tables:
             if table.get("caption") and table["caption"] in text:
                 table_content = self._format_table(table)
@@ -320,9 +319,7 @@ class SemanticChunker(BaseChunker):
             else:
                 if current_part.strip():
                     parts.append(current_part.strip())
-                current_part = (
-                    heading_text + "\n" + para + "\n\n" if heading_text else para + "\n\n"
-                )
+                current_part = heading_text + "\n" + para + "\n\n" if heading_text else para + "\n\n"
                 current_size = len(current_part)
 
         if current_part.strip():

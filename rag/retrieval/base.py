@@ -6,9 +6,7 @@ from app.models.schemas import RetrievedNode
 
 class BaseRetriever(ABC):
     @abstractmethod
-    async def retrieve(
-        self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None
-    ) -> list[RetrievedNode]:
+    async def retrieve(self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None) -> list[RetrievedNode]:
         pass
 
     @abstractmethod

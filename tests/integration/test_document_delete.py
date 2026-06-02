@@ -1,5 +1,6 @@
-from unittest.mock import AsyncMock
 import uuid
+from unittest.mock import AsyncMock
+
 import pytest
 
 

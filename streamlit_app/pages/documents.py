@@ -138,11 +138,7 @@ new_status = st.selectbox(
     format_func=lambda x: "选择状态..." if x is None else x,
     key="batch_status",
 )
-if (
-    st.button("📝 更新状态", use_container_width=True, key="batch_update_status_btn")
-    and selected_docs
-    and new_status
-):
+if st.button("📝 更新状态", use_container_width=True, key="batch_update_status_btn") and selected_docs and new_status:
     try:
         response = requests.patch(
             f"{API_BASE}/documents/batch-update",
@@ -156,11 +152,7 @@ if (
         st.error(f"批量更新失败: {str(e)}")
 
 tags_input = st.text_input("批量添加标签", key="batch_tags_input", placeholder="逗号分隔")
-if (
-    st.button("🏷️ 添加标签", use_container_width=True, key="batch_add_tags_btn")
-    and selected_docs
-    and tags_input
-):
+if st.button("🏷️ 添加标签", use_container_width=True, key="batch_add_tags_btn") and selected_docs and tags_input:
     tags = [t.strip() for t in tags_input.split(",")]
     try:
         response = requests.patch(
@@ -184,9 +176,7 @@ else:
     else:
         # 移除不在当前页的文档
         current_ids = {doc.get("id", "") for doc in documents}
-        st.session_state.selected_docs = {
-            doc_id for doc_id in st.session_state.selected_docs if doc_id in current_ids
-        }
+        st.session_state.selected_docs = {doc_id for doc_id in st.session_state.selected_docs if doc_id in current_ids}
 
     for doc in documents:
         doc_id = doc.get("id", "")
@@ -282,9 +272,7 @@ if uploaded_files:
                     # Build multipart form with multiple files
                     files = []
                     for f in uploaded_files:
-                        files.append(
-                            ("files", (f.name, f.getvalue(), f.type))
-                        )
+                        files.append(("files", (f.name, f.getvalue(), f.type)))
 
                     response = requests.post(
                         f"{API_BASE}/documents/upload/batch",
@@ -300,6 +288,7 @@ if uploaded_files:
                         if result.get("succeeded", 0) > 0:
                             with st.spinner("处理中，请等待..."):
                                 import time
+
                                 max_wait = 120  # 最大等待120秒
                                 interval = 2
                                 waited = 0
@@ -353,9 +342,14 @@ if uploaded_files:
                                 }.get(item.get("status", ""), "❓")
 
                                 if item.get("status") in ["failed", "duplicate"]:
-                                    st.markdown(f"{status_icon} {item.get('file_name', 'unknown')}: {item.get('error_message', item.get('status', 'unknown'))}")
+                                    msg = item.get("error_message", item.get("status", "unknown"))
+                                    st.markdown(f"{status_icon} {item.get('file_name', 'unknown')}: {msg}")
                                 else:
-                                    st.markdown(f"{status_icon} {item.get('file_name', 'unknown')}: {item.get('status', 'unknown')}")
+                                    st.markdown(
+                                        f"{status_icon} "
+                                        f"{item.get('file_name', 'unknown')}: "
+                                        f"{item.get('status', 'unknown')}"
+                                    )
 
                         st.rerun()
                     else:

@@ -8,9 +8,9 @@ class CitationVerifier:
     """Service to extract and verify citations from LLM answer text."""
 
     # Pattern: [来源X](文件名称#页码) - old format (English brackets)
-    CITATION_PATTERN_OLD = re.compile(r'\[来源(\d+)\]\(([^)]+)\)')
+    CITATION_PATTERN_OLD = re.compile(r"\[来源(\d+)\]\(([^)]+)\)")
     # Pattern: 「来源X」（文件名#页码）- new format (Chinese quotes)
-    CITATION_PATTERN_NEW = re.compile(r'「来源(\d+)」（([^）]+)）')
+    CITATION_PATTERN_NEW = re.compile(r"「来源(\d+)」（([^）]+)）")
 
     def extract_and_verify(
         self,
@@ -31,11 +31,9 @@ class CitationVerifier:
             return []
 
         # Build context index by position (1-based)
-        context_by_index: dict[int, RetrievedNode] = {
-            i: ctx for i, ctx in enumerate(contexts, 1)
-        }
+        context_by_index: dict[int, RetrievedNode] = {i: ctx for i, ctx in enumerate(contexts, 1)}
 
-        citations = []
+        citations: list[Citation] = []
         matched_indices: set[int] = set()
 
         # Find all citation patterns in the answer (both old and new formats)
@@ -54,7 +52,10 @@ class CitationVerifier:
                     # Check if source description matches context metadata
                     ctx_file = ctx.metadata.get("source_file", "")
                     verified = self._verify_citation(
-                        file_name, page_number, ctx_file, ctx.metadata.get("page_number")
+                        file_name,
+                        page_number,
+                        ctx_file,
+                        ctx.metadata.get("page_number"),
                     )
 
                     citation = Citation(
@@ -115,8 +116,8 @@ class CitationVerifier:
         Returns:
             tuple of (file_name, page_number)
         """
-        if '#' in source_desc:
-            parts = source_desc.rsplit('#', 1)
+        if "#" in source_desc:
+            parts = source_desc.rsplit("#", 1)
             file_name = parts[0] if parts[0] else None
             try:
                 page_number = int(parts[1]) if len(parts) > 1 else None
@@ -182,13 +183,13 @@ class CitationVerifier:
             return ""
 
         # Remove page suffix like "#1", "#2"
-        normalized = re.sub(r'#\d+$', '', filename)
+        normalized = re.sub(r"#\d+$", "", filename)
 
         # Lowercase
         normalized = normalized.lower()
 
         # Remove file extension
-        normalized = re.sub(r'\.(md|txt|pdf|docx)$', '', normalized)
+        normalized = re.sub(r"\.(md|txt|pdf|docx)$", "", normalized)
 
         return normalized.strip()
 

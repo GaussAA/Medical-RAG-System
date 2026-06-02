@@ -1,5 +1,3 @@
-from typing import Any
-
 from app.models.schemas import RetrievedNode, RiskWarning
 
 
@@ -9,13 +7,24 @@ class WarningsGenerator:
     def __init__(self, hallucination_threshold: float = 0.5):
         self.hallucination_threshold = hallucination_threshold
         self.medication_keywords = [
-            "药物", "用药", "剂量", "服药", "吃药", "药品", "药",
+            "药物",
+            "用药",
+            "剂量",
+            "服药",
+            "吃药",
+            "药品",
+            "药",
         ]
         self.diagnosis_keywords = [
-            "诊断", "确诊", "治疗方案",
+            "诊断",
+            "确诊",
+            "治疗方案",
         ]
         self.emergency_keywords = [
-            "紧急", "急诊", "立即", "马上",
+            "紧急",
+            "急诊",
+            "立即",
+            "马上",
         ]
         self.general_warning = "本回答由AI生成，仅供参考，不能替代专业医疗建议。"
 
@@ -80,7 +89,7 @@ class WarningsGenerator:
     def _check_hallucination(self, citations: list) -> list[RiskWarning]:
         """Check for unverified citations indicating hallucination."""
         warnings = []
-        unverified = [c for c in citations if not getattr(c, 'verified', True)]
+        unverified = [c for c in citations if not getattr(c, "verified", True)]
         total = len(citations)
         if total > 0 and len(unverified) / total > self.hallucination_threshold:
             warnings.append(

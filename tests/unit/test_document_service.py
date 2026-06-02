@@ -1,11 +1,12 @@
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from app.models.schemas import Chunk, ChunkMetadata, ParsedDocument
 from app.services.document import DocumentService
 from app.services.document_processor import DocumentProcessor
 from app.services.document_store import DocumentStore
 from app.services.retrieval_indexer import RetrievalIndexer
-from app.models.schemas import Chunk, ChunkMetadata, ParsedDocument
 
 
 class TestDocumentProcessor:
@@ -177,9 +178,7 @@ class TestDocumentService:
                     )
                 ]
 
-                with patch.object(
-                    self.service.rag_engine, "process_document", new_callable=AsyncMock
-                ) as mock_proc:
+                with patch.object(self.service.rag_engine, "process_document", new_callable=AsyncMock) as mock_proc:
                     mock_proc.return_value = True
 
                     result = await self.service.process_document(

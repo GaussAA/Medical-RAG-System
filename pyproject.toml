@@ -73,8 +73,6 @@ explicit = true
 
 [project.optional-dependencies]
 dev = [
-    "black>=24.10.0",
-    "isort>=5.13.0",
     "ruff>=0.8.0",
     "mypy>=1.14.0",
     "pre-commit>=4.0.0",
@@ -89,13 +87,18 @@ exclude = ["tests*", "scripts*"]
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 100
-target-version = ["py311"]
-
 [tool.ruff]
-line-length = 100
-target-version = "py311"
+line-length = 120
+
+# 定义需要检查的规则（这里包含了 isort 的 I 规则和 pyflakes/pep8 等）
+[tool.ruff.lint]
+select = [
+    "I",   # isort 导入排序
+    "F",   # pyflakes 基础错误
+    "E",   # pycodestyle 错误
+    "W",   # pycodestyle 警告
+    "UP",  # pyupgrade 现代化语法
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

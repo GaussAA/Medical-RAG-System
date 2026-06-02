@@ -1,19 +1,19 @@
 from app.core.metrics import (
-    QUERY_LATENCY,
-    RETRIEVAL_COUNT,
-    ERROR_COUNT,
     ACTIVE_QUERIES,
-    LLM_TOKENS,
+    ERROR_COUNT,
+    GENERATION_LATENCY,
+    GPU_MEMORY_FREE,
     GPU_MEMORY_TOTAL,
     GPU_MEMORY_USED,
-    GPU_MEMORY_FREE,
     GPU_MODELS_LOADED,
-    RETRIEVAL_LATENCY,
+    LLM_TOKENS,
+    QUERY_LATENCY,
     RERANK_LATENCY,
-    GENERATION_LATENCY,
-    get_metrics,
-    get_content_type,
+    RETRIEVAL_COUNT,
+    RETRIEVAL_LATENCY,
     _update_gpu_metrics,
+    get_content_type,
+    get_metrics,
 )
 
 

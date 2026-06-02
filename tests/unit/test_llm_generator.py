@@ -1,5 +1,6 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from rag.generation.llm_generator import LLMGenerator
 
@@ -45,7 +46,7 @@ class TestLLMGenerator:
         mock_response.choices = [MagicMock(message=MagicMock(content="Test answer"))]
         mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20)
 
-        with patch.object(gen, '_call_with_retry', new_callable=AsyncMock, return_value=mock_response) as mock_call:
+        with patch.object(gen, "_call_with_retry", new_callable=AsyncMock, return_value=mock_response) as mock_call:
             result = await gen.generate(
                 query="测试问题",
                 contexts=[],

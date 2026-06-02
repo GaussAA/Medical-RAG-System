@@ -86,6 +86,7 @@ class TestGenerationEvaluator:
 
     def test_citation_accuracy_all_verified(self):
         """Test citation accuracy when all citations are verified."""
+
         # Mock citations with verified=True
         class MockCitation:
             def __init__(self, verified):
@@ -102,6 +103,7 @@ class TestGenerationEvaluator:
 
     def test_citation_accuracy_none_verified(self):
         """Test citation accuracy when no citations are verified."""
+
         class MockCitation:
             def __init__(self, verified):
                 self.verified = verified
@@ -116,6 +118,7 @@ class TestGenerationEvaluator:
 
     def test_citation_accuracy_partial_verified(self):
         """Test citation accuracy with partial verification."""
+
         class MockCitation:
             def __init__(self, verified):
                 self.verified = verified
@@ -136,6 +139,7 @@ class TestGenerationEvaluator:
 
     def test_hallucination_ratio_all_unverified(self):
         """Test hallucination ratio when all citations are unverified."""
+
         class MockCitation:
             def __init__(self, verified):
                 self.verified = verified
@@ -150,6 +154,7 @@ class TestGenerationEvaluator:
 
     def test_hallucination_ratio_none_unverified(self):
         """Test hallucination ratio when all citations are verified."""
+
         class MockCitation:
             def __init__(self, verified):
                 self.verified = verified

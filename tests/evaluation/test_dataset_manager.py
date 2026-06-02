@@ -1,10 +1,16 @@
 """Tests for DatasetManager and DatasetValidator."""
 
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
-from rag.evaluation.dataset_manager import DatasetManager, DatasetValidator, ValidationReport
+
+import pytest
+
+from rag.evaluation.dataset_manager import (
+    DatasetManager,
+    DatasetValidator,
+    ValidationReport,
+)
 
 
 @pytest.fixture

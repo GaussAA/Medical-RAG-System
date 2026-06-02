@@ -123,8 +123,31 @@ class TestRetrievalEvaluator:
         evaluator = RetrievalEvaluator(k_values=[3, 5, 10])
 
         metrics = evaluator.evaluate(
-            retrieved_ids=["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "doc10", "doc11"],
-            ground_truth_ids=["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8", "doc9", "doc10"],
+            retrieved_ids=[
+                "doc1",
+                "doc2",
+                "doc3",
+                "doc4",
+                "doc5",
+                "doc6",
+                "doc7",
+                "doc8",
+                "doc9",
+                "doc10",
+                "doc11",
+            ],
+            ground_truth_ids=[
+                "doc1",
+                "doc2",
+                "doc3",
+                "doc4",
+                "doc5",
+                "doc6",
+                "doc7",
+                "doc8",
+                "doc9",
+                "doc10",
+            ],
         )
 
         assert 3 in metrics.precision_at_k
@@ -179,7 +202,16 @@ class TestRetrievalEvaluatorEdgeCases:
         """Test when retrieved is subset of ground truth."""
         metrics = self.evaluator.evaluate(
             retrieved_ids=["doc1", "doc2", "doc3", "doc4", "doc5"],
-            ground_truth_ids=["doc1", "doc2", "doc3", "doc4", "doc5", "doc6", "doc7", "doc8"],
+            ground_truth_ids=[
+                "doc1",
+                "doc2",
+                "doc3",
+                "doc4",
+                "doc5",
+                "doc6",
+                "doc7",
+                "doc8",
+            ],
         )
 
         # 5/5 = 1.0 precision, but 5/8 recall

@@ -1,4 +1,5 @@
 """Source document display component."""
+
 import streamlit as st
 
 
@@ -58,8 +59,10 @@ def render_source_card(
         st.divider()
 
 
-def _get_source_icon(source_type: str | None) -> str:
+def _get_source_icon(source_type: str | None = None) -> str:
     """Get icon for source type."""
+    if source_type is None:
+        source_type = "unknown"
     icon_map = {
         "text": "📄",
         "table": "📊",

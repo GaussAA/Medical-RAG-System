@@ -9,7 +9,8 @@ Provides:
 import functools
 import hashlib
 import json
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import redis.asyncio as redis
 from loguru import logger
@@ -217,7 +218,7 @@ class CacheManagerSync:
             data = client.get(key)
             if data is None:
                 return None
-            return json.loads(data)
+            return json.loads(data)  # type: ignore[arg-type]
         except Exception as e:
             logger.warning(f"Cache get error for key {key}: {e}")
             return None

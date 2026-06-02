@@ -57,7 +57,7 @@ async def check_redis() -> dict[str, Any]:
             db=settings.database.redis.db,
             password=settings.database.redis.password,
         )
-        await r.ping()
+        await r.ping()  # type: ignore[misc]
         await r.aclose()
         return {"status": "healthy"}
     except Exception as e:
@@ -67,7 +67,7 @@ async def check_redis() -> dict[str, Any]:
 @router.get("/health", response_model=HealthResponse)
 async def health_check(check_dependencies: bool = False) -> HealthResponse:
     """Enhanced health check endpoint with optional dependency checks."""
-    response = {
+    response: dict[str, Any] = {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
     }
@@ -78,9 +78,9 @@ async def health_check(check_dependencies: bool = False) -> HealthResponse:
         redis_status = await check_redis()
 
         response["dependencies"] = {
-            "postgresql": pg_status,
-            "qdrant": qdrant_status,
-            "redis": redis_status,
+            "postgresql": DependencyStatus(**pg_status),
+            "qdrant": DependencyStatus(**qdrant_status),
+            "redis": DependencyStatus(**redis_status),
         }
 
         deps = [pg_status, qdrant_status, redis_status]

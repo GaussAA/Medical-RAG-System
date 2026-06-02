@@ -1,14 +1,13 @@
 """Protocol 接口定义 - 评估器抽象层"""
 
 from abc import abstractmethod
-from typing import Protocol, runtime_checkable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from app.models.schemas import QueryResponse
     from rag.evaluation.evaluator import RAGEvaluationResult
-    from rag.evaluation.retrieval_eval import RetrievalMetrics
     from rag.evaluation.generation_eval import GenerationMetrics
     from rag.evaluation.medical_safety_eval import MedicalSafetyMetrics
+    from rag.evaluation.retrieval_eval import RetrievalMetrics
 
 
 @runtime_checkable

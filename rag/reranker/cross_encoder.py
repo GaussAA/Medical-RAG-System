@@ -5,7 +5,7 @@ import torch
 from loguru import logger
 
 from app.core.gpu_memory_manager import GPUMemoryManager
-from app.models.schemas import RetrievedNode, RerankedNode
+from app.models.schemas import RerankedNode, RetrievedNode
 from config.settings import get_settings
 
 
@@ -72,8 +72,7 @@ class Reranker:
         usable = info["free_mb"] - safety_margin
 
         logger.debug(
-            f"GPU memory check: required={self.estimated_memory_mb}MB, "
-            f"free={info['free_mb']}MB, usable={usable}MB"
+            f"GPU memory check: required={self.estimated_memory_mb}MB, free={info['free_mb']}MB, usable={usable}MB"
         )
 
         if usable < self.estimated_memory_mb:
@@ -85,6 +84,7 @@ class Reranker:
             return False
 
         # 迁移到 GPU
+        assert self.model is not None
         self.model.to("cuda")
         self._model_on_gpu = True
         self._model_on_cpu = False
@@ -110,6 +110,7 @@ class Reranker:
         self._ensure_model_loaded()
 
         # 迁移到 CPU
+        assert self.model is not None
         self.model.to("cpu")
         self._model_on_gpu = False
         self._model_on_cpu = True
@@ -144,6 +145,7 @@ class Reranker:
 
         pairs = [(query, node.content) for node in candidates]
 
+        assert self.model is not None
         scores = self.model.predict(pairs, batch_size=self.batch_size)
 
         if self.apply_normalization:

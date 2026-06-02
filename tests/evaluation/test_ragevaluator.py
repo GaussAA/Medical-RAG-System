@@ -5,10 +5,9 @@ generation, and medical safety metrics.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
-from rag.evaluation.evaluator import RAGEvaluator, RAGEvaluationResult, EvalGroundTruth
-from app.models.schemas import QueryResponse, Citation, RiskWarning, CitationPosition
+from app.models.schemas import Citation, CitationPosition, QueryResponse, RiskWarning
+from rag.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
 
 
 class TestRAGEvaluatorIntegration:

@@ -34,8 +34,8 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
 async def process_document_background(doc_id: str, file_path: str, title: str | None = None):
     """后台处理文档（使用独立的 DocumentService 实例）"""
-    from app.services.document import DocumentService
     from app.core.database import get_session_factory
+    from app.services.document import DocumentService
 
     factory = get_session_factory()
     async_session = factory()
@@ -61,9 +61,9 @@ async def process_batch_documents_background(
     """
     批量处理文档 - 统一向量化，只加载一次 embedding 模型。
     """
-    from app.services.document_processor import DocumentProcessor
     from app.core.database import get_session_factory
     from app.core.rag_engine import RAGEngine
+    from app.services.document_processor import DocumentProcessor
 
     factory = get_session_factory()
     async_session = factory()
@@ -75,7 +75,9 @@ async def process_batch_documents_background(
 
         # Step 1: Parse all documents and collect chunks (can be done in parallel)
         all_nodes = []
-        doc_chunks_map: dict[str, tuple[list, list[dict], list]] = {}  # doc_id -> (chunks, heading_ids, retrieved_nodes)
+        doc_chunks_map: dict[
+            str, tuple[list, list[dict], list]
+        ] = {}  # doc_id -> (chunks, heading_ids, retrieved_nodes)
 
         for file_info in file_infos:
             doc_id = file_info["doc_id"]
@@ -129,11 +131,16 @@ async def process_batch_documents_background(
         doc_heading_ids: dict[str, dict[int, str]] = {}  # doc_id -> {heading_position: heading_id}
 
         async with factory() as session:
-            for doc_id, (chunks, heading_tree, retrieved_nodes) in doc_chunks_map.items():
+            for doc_id, (
+                chunks,
+                heading_tree,
+                retrieved_nodes,
+            ) in doc_chunks_map.items():
                 try:
                     from app.models.database import Heading
-                    position_to_id = {}
-                    position_to_heading = {}
+
+                    position_to_id: dict[int, str] = {}
+                    position_to_heading: dict[int, uuid.UUID] = {}
 
                     for heading_info in heading_tree:
                         parent_position = heading_info.get("parent_position")
@@ -164,6 +171,7 @@ async def process_batch_documents_background(
             if not success:
                 logger.warning(f"[Batch {batch_id}] GPU vectorization failed, falling back to CPU")
                 from app.services.retrieval_indexer import RetrievalIndexer
+
                 indexer = RetrievalIndexer()
                 await indexer.add_documents(all_nodes)
             else:
@@ -171,7 +179,11 @@ async def process_batch_documents_background(
 
         # Step 4: Save chunks to PostgreSQL and update document status
         async with factory() as session:
-            for doc_id, (chunks, heading_tree, retrieved_nodes) in doc_chunks_map.items():
+            for doc_id, (
+                chunks,
+                heading_tree,
+                retrieved_nodes,
+            ) in doc_chunks_map.items():
                 try:
                     from app.models.database import Chunk as DBChunk
                     from app.models.database import Document as DBDocument
@@ -186,7 +198,7 @@ async def process_batch_documents_background(
 
                     # Save chunks - use chunk position to find heading_id
                     for i, chunk in enumerate(chunks):
-                        chunk_position = chunk.metadata.position if hasattr(chunk.metadata, 'position') else i
+                        chunk_position = chunk.metadata.position if hasattr(chunk.metadata, "position") else i
                         heading_id_str = heading_ids_map.get(chunk_position)
                         chunk_record = DBChunk(
                             id=uuid.UUID(chunk.chunk_id),
@@ -214,11 +226,14 @@ async def process_batch_documents_background(
                         # Verify save was successful
                         verify_result = await session.execute(
                             text("SELECT COUNT(*) FROM chunks WHERE doc_id = :doc_id"),
-                            {"doc_id": uuid.UUID(doc_id)}
+                            {"doc_id": uuid.UUID(doc_id)},
                         )
                         verify_count = verify_result.scalar()
                         if verify_count != len(chunks):
-                            logger.error(f"[Batch {batch_id}] Chunk save verification failed for {doc_id}: expected {len(chunks)}, got {verify_count}")
+                            logger.error(
+                                f"[Batch {batch_id}] Chunk save verification failed for {doc_id}: "
+                                f"expected {len(chunks)}, got {verify_count}"
+                            )
 
                     # Update batch status
                     for item in app_state_ref.batch_upload_status[batch_id].items:
@@ -339,12 +354,14 @@ async def upload_documents_batch(
 
         # Type validation
         if file_ext not in allowed_types:
-            items.append(BatchUploadItem(
-                document_id="",
-                file_name=original_filename,
-                status="failed",
-                error_message=f"Unsupported file type: {file_ext}",
-            ))
+            items.append(
+                BatchUploadItem(
+                    document_id="",
+                    file_name=original_filename,
+                    status="failed",
+                    error_message=f"Unsupported file type: {file_ext}",
+                )
+            )
             failed += 1
             continue
 
@@ -353,12 +370,14 @@ async def upload_documents_batch(
 
         # Check duplicate by filename
         if raw_file_path.exists():
-            items.append(BatchUploadItem(
-                document_id="",
-                file_name=original_filename,
-                status="duplicate",
-                error_message="File already exists",
-            ))
+            items.append(
+                BatchUploadItem(
+                    document_id="",
+                    file_name=original_filename,
+                    status="duplicate",
+                    error_message="File already exists",
+                )
+            )
             duplicate += 1
             continue
 
@@ -371,12 +390,14 @@ async def upload_documents_batch(
             with open(raw_file_path, "wb") as f:
                 f.write(content)
         except Exception as e:
-            items.append(BatchUploadItem(
-                document_id=doc_id,
-                file_name=original_filename,
-                status="failed",
-                error_message=f"Failed to save file: {str(e)}",
-            ))
+            items.append(
+                BatchUploadItem(
+                    document_id=doc_id,
+                    file_name=original_filename,
+                    status="failed",
+                    error_message=f"Failed to save file: {str(e)}",
+                )
+            )
             failed += 1
             continue
 
@@ -384,25 +405,31 @@ async def upload_documents_batch(
         try:
             await document_service.init_document(doc_id, str(raw_file_path), original_filename)
         except Exception as e:
-            items.append(BatchUploadItem(
-                document_id=doc_id,
-                file_name=original_filename,
-                status="failed",
-                error_message=f"Failed to initialize document: {str(e)}",
-            ))
+            items.append(
+                BatchUploadItem(
+                    document_id=doc_id,
+                    file_name=original_filename,
+                    status="failed",
+                    error_message=f"Failed to initialize document: {str(e)}",
+                )
+            )
             failed += 1
             continue
 
-        file_infos.append({
-            "doc_id": doc_id,
-            "file_path": str(raw_file_path),
-            "title": original_filename,
-        })
-        items.append(BatchUploadItem(
-            document_id=doc_id,
-            file_name=original_filename,
-            status="processing",
-        ))
+        file_infos.append(
+            {
+                "doc_id": doc_id,
+                "file_path": str(raw_file_path),
+                "title": original_filename,
+            }
+        )
+        items.append(
+            BatchUploadItem(
+                document_id=doc_id,
+                file_name=original_filename,
+                status="processing",
+            )
+        )
         succeeded += 1
 
     # Initialize batch status in app.state
@@ -419,11 +446,13 @@ async def upload_documents_batch(
     )
 
     # Start unified batch processing (single embedding model load for all docs)
-    asyncio.create_task(process_batch_documents_background(
-        batch_id,
-        file_infos,
-        request.app.state,
-    ))
+    asyncio.create_task(
+        process_batch_documents_background(
+            batch_id,
+            file_infos,
+            request.app.state,
+        )
+    )
 
     message = f"Batch upload started: {succeeded} files being processed"
     if duplicate > 0:
@@ -462,7 +491,8 @@ async def get_batch_upload_status(
 async def list_documents(
     request: Request,
     status: str | None = Query(
-        None, description="Filter by status (pending, processing, completed, failed, archived)"
+        None,
+        description="Filter by status (pending, processing, completed, failed, archived)",
     ),
     tags: str | None = Query(None, description="Filter by tags (comma-separated)"),
     file_type: str | None = Query(None, description="Filter by file type (pdf, docx, md, txt)"),
@@ -479,14 +509,14 @@ async def list_documents(
 
     async with DocumentStore() as store:
         documents, total = await store.list_documents(
-        status=status,
-        tags=tag_list,
-        file_type=file_type,
-        date_from=date_from,
-        date_to=date_to,
-        page=page,
-        page_size=page_size,
-    )
+            status=status,
+            tags=tag_list,
+            file_type=file_type,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            page_size=page_size,
+        )
 
     return DocumentListResponse(
         documents=[
@@ -551,11 +581,11 @@ async def update_document(
 
     async with DocumentStore() as store:
         doc = await store.update_document(
-        doc_id=document_id,
-        status=update_data.status,
-        tags=update_data.tags,
-        operation=update_data.operation,
-    )
+            doc_id=document_id,
+            status=update_data.status,
+            tags=update_data.tags,
+            operation=update_data.operation,
+        )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -672,11 +702,11 @@ async def update_chunk(
     # Update chunk in PostgreSQL
     async with DocumentStore() as store:
         chunk = await store.update_chunk(
-        doc_id=document_id,
-        chunk_id=chunk_id,
-        content=update_data.content,
-        section_title=update_data.section_title,
-    )
+            doc_id=document_id,
+            chunk_id=chunk_id,
+            content=update_data.content,
+            section_title=update_data.section_title,
+        )
     if not chunk:
         raise HTTPException(status_code=404, detail="Chunk not found")
 

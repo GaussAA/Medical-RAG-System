@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import markdown
+import markdown  # type: ignore[import-untyped]
 from bs4 import BeautifulSoup
 
 from app.models.schemas import ParsedDocument, TableData
@@ -14,6 +14,7 @@ from rag.parser.base import BaseParser
 @dataclass
 class HeadingNode:
     """Represents a heading in the Markdown document tree."""
+
     level: int  # 1-6 for H1-H6
     title: str
     line_number: int
@@ -35,7 +36,7 @@ class MarkdownParser(BaseParser):
     async def parse(self, file_path: str | Path) -> ParsedDocument:
         file_path = Path(file_path)
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         html = markdown.markdown(content, extensions=["tables"])
@@ -46,7 +47,7 @@ class MarkdownParser(BaseParser):
         soup = BeautifulSoup(html, "html.parser")
 
         for element in soup.children:
-            if element.name == "table":
+            if element.name == "table":  # type: ignore[attr-defined]
                 table_data = self._parse_html_table(element)
                 if table_data:
                     tables.append(table_data)
@@ -73,7 +74,7 @@ class MarkdownParser(BaseParser):
         """
         file_path = Path(file_path)
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
 
         # Build heading tree
@@ -134,7 +135,7 @@ class MarkdownParser(BaseParser):
 
         text_parts = []
         for element in soup.children:
-            if element.name == "table":
+            if element.name == "table":  # type: ignore[attr-defined]
                 continue  # Tables handled separately
             elif element.get_text().strip():
                 text_parts.append(element.get_text())
@@ -170,8 +171,10 @@ class MarkdownParser(BaseParser):
 
                 # Collect table lines following the caption
                 i += 1
-                while i < len(lines) and lines[i].strip() and (
-                    lines[i].strip().startswith("|") or lines[i].strip().startswith("-")
+                while (
+                    i < len(lines)
+                    and lines[i].strip()
+                    and (lines[i].strip().startswith("|") or lines[i].strip().startswith("-"))
                 ):
                     table_lines.append(lines[i])
                     i += 1
@@ -194,7 +197,7 @@ class MarkdownParser(BaseParser):
             return TableData(headers=[], rows=[], caption=caption)
 
         # Filter out separator lines (|---|---|)
-        content_lines = [l for l in lines if not re.match(r"^\|[\s\-:|]+\|$", l.strip())]
+        content_lines = [line for line in lines if not re.match(r"^\|[\s\-:|]+\|$", line.strip())]
 
         if not content_lines:
             return TableData(headers=[], rows=[], caption=caption)
@@ -220,7 +223,7 @@ class MarkdownParser(BaseParser):
 
     def extract_tables(self, content: Any) -> list[TableData]:
         if isinstance(content, (str, Path)):
-            with open(content, "r", encoding="utf-8") as f:
+            with open(content, encoding="utf-8") as f:
                 content = f.read()
 
         html = markdown.markdown(content, extensions=["tables"])

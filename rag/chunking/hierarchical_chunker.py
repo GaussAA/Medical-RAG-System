@@ -5,7 +5,6 @@ from app.models.schemas import Chunk, ChunkMetadata
 from config.settings import get_settings
 from rag.chunking.chunker import BaseChunker
 
-
 MARKDOWN_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
 TABLE_CAPTION_RE = re.compile(r"^\*\*(表[一二三四五六七八九十\d]+[^\*]*)\*\*$")
 
@@ -59,9 +58,7 @@ class HierarchicalChunker(BaseChunker):
                 continue
 
             # Build heading tree context for this section
-            section_heading_tree = self._build_section_heading_tree(
-                heading_tree, heading_level, heading_title
-            )
+            section_heading_tree = self._build_section_heading_tree(heading_tree, heading_level, heading_title)
 
             # Determine content type
             content_type = self._detect_content_type(content, tables)
@@ -112,7 +109,7 @@ class HierarchicalChunker(BaseChunker):
         sections = []
 
         current_heading = None
-        current_content_lines = []
+        current_content_lines: list[str] = []
         current_start_line = 0
 
         for line_num, line in enumerate(lines, start=1):
@@ -120,19 +117,17 @@ class HierarchicalChunker(BaseChunker):
 
             if match:
                 # Save previous section if exists
-                if current_heading is not None and (
-                    current_content_lines or len(current_content_lines) > 0
-                ):
+                if current_heading is not None and (current_content_lines or len(current_content_lines) > 0):
                     content = "\n".join(current_content_lines)
                     if content.strip():
-                        sections.append({
-                            "heading": current_heading,
-                            "content": content,
-                            "start_line": current_start_line,
-                        })
+                        sections.append(
+                            {
+                                "heading": current_heading,
+                                "content": content,
+                                "start_line": current_start_line,
+                            }
+                        )
                     # Clear after saving
-                    current_content_lines = []
-
                 # Start new section - heading line is NOT included in content
                 level = len(match.group(1))
                 title = match.group(2).strip()
@@ -147,25 +142,27 @@ class HierarchicalChunker(BaseChunker):
         if current_content_lines:
             content = "\n".join(current_content_lines)
             if content.strip():
-                sections.append({
-                    "heading": current_heading or {"level": 0, "title": ""},
-                    "content": content,
-                    "start_line": current_start_line,
-                })
+                sections.append(
+                    {
+                        "heading": current_heading or {"level": 0, "title": ""},
+                        "content": content,
+                        "start_line": current_start_line,
+                    }
+                )
 
         # If no sections created at all AND no heading was ever set, treat as plain text
         if not sections and text.strip() and current_heading is None:
-            sections.append({
-                "heading": {"level": 0, "title": ""},
-                "content": text.strip(),
-                "start_line": 1,
-            })
+            sections.append(
+                {
+                    "heading": {"level": 0, "title": ""},
+                    "content": text.strip(),
+                    "start_line": 1,
+                }
+            )
 
         return sections
 
-    def _build_section_heading_tree(
-        self, full_tree: dict[int, str], level: int, title: str
-    ) -> dict[int, str]:
+    def _build_section_heading_tree(self, full_tree: dict[int, str], level: int, title: str) -> dict[int, str]:
         """Build heading tree up to and including the current heading."""
         result = {}
         for lvl, h_title in full_tree.items():
@@ -227,18 +224,15 @@ class HierarchicalChunker(BaseChunker):
             is_table_row = line.strip().startswith("|")
 
             # Check if this line is a list item
-            is_list_item = bool(
-                re.match(r"^[·\-\*]\s+", line.strip()) or
-                re.match(r"^（[0-9]+）", line.strip())
-            )
+            is_list_item = bool(re.match(r"^[·\-\*]\s+", line.strip()) or re.match(r"^（[0-9]+）", line.strip()))
 
             # Determine block type
             block_type = "table" if is_table_row else ("list" if is_list_item else "text")
 
             # If block type changes or adding this line exceeds limit
             if current_block and (
-                (block_type != current_block_type and current_block_type in ("table", "list")) or
-                current_size + line_size > self.max_chunk_length
+                (block_type != current_block_type and current_block_type in ("table", "list"))
+                or current_size + line_size > self.max_chunk_length
             ):
                 # Create chunk from current block
                 block_content = "\n".join(current_block)
@@ -310,9 +304,9 @@ class HierarchicalChunker(BaseChunker):
             last = merged[-1]
 
             can_merge = (
-                last.metadata.content_type == chunk.metadata.content_type and
-                last.metadata.heading_level == chunk.metadata.heading_level and
-                last.metadata.char_count + chunk.metadata.char_count < self.max_chunk_length
+                last.metadata.content_type == chunk.metadata.content_type
+                and last.metadata.heading_level == chunk.metadata.heading_level
+                and last.metadata.char_count + chunk.metadata.char_count < self.max_chunk_length
             )
 
             if can_merge:

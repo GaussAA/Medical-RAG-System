@@ -1,11 +1,18 @@
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import requests
 import streamlit as st
+
+from streamlit_app.components.chat import (
+    render_citations,
+    render_confidence_badge,
+    render_warnings,
+)
 
 st.title("💬 智能问答")
 
@@ -22,17 +29,11 @@ if "message_metadata" not in st.session_state:
 session_id = st.session_state.get("session_id")
 if session_id:
     try:
-        response = requests.get(
-            f"http://localhost:8000/api/v1/sessions/{session_id}/messages",
-            timeout=10
-        )
+        response = requests.get(f"http://localhost:8000/api/v1/sessions/{session_id}/messages", timeout=10)
         if response.status_code == 200:
             messages = response.json()
             if messages and not st.session_state.messages:
-                st.session_state.messages = [
-                    {"role": m["role"], "content": m["content"]}
-                    for m in messages
-                ]
+                st.session_state.messages = [{"role": m["role"], "content": m["content"]} for m in messages]
                 # Store metadata for rendering history附加信息
                 st.session_state.message_metadata = {
                     m["message_id"]: {
@@ -114,8 +115,6 @@ def render_streaming_answer(full_answer):
 
 
 # 显示已加载的消息
-from streamlit_app.components.chat import render_confidence_badge, render_warnings, render_citations
-
 for idx, message in enumerate(st.session_state.get("messages", [])):
     st.chat_message(message["role"]).write(message["content"])
     # 如果是 assistant 消息，渲染附加信息
@@ -146,7 +145,7 @@ if question:
     # 使用 st.write_stream 流式显示回答
     with st.spinner("正在检索知识库..."):
         try:
-            result_container = {}
+            result_container: dict[str, Any] = {}
             st.write_stream(answer_stream(question, session_id_to_use, result_container))
 
             # 流结束后检查 result_container
@@ -158,7 +157,11 @@ if question:
                 processing_time = result_container.get("processing_time", 0.0)
 
                 # 流结束后只渲染元数据（置信度、警告、引用），answer 已由 st.write_stream 显示
-                from streamlit_app.components.chat import render_confidence_badge, render_warnings, render_citations
+                from streamlit_app.components.chat import (
+                    render_citations,
+                    render_confidence_badge,
+                    render_warnings,
+                )
 
                 st.markdown("### 回答")
                 render_confidence_badge(confidence)
@@ -178,7 +181,7 @@ if question:
             else:
                 raise Exception("流式接口未返回完整数据")
 
-        except (StopIteration, TypeError) as e:
+        except (StopIteration, TypeError):
             # 流式接口失败或未返回 final_data，回退到同步接口
             fallback_placeholder = st.empty()
             fallback_placeholder.info("流式输出未完成，回退到同步接口...")

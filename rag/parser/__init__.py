@@ -10,7 +10,9 @@ async def parse_document(file_path: str | Path) -> ParsedDocument:
     return await parser.parse(file_path)
 
 
-async def parse_document_with_headings(file_path: str | Path) -> tuple[ParsedDocument, list[dict]]:
+async def parse_document_with_headings(
+    file_path: str | Path,
+) -> tuple[ParsedDocument, list[dict]]:
     """
     Parse a Markdown document and extract heading tree structure.
 

@@ -103,11 +103,11 @@ class VectorRetriever(BaseRetriever):
 
         if usable_gb < required_gb:
             logger.warning(
-                f"GPU memory insufficient for embedding: "
-                f"required={required_gb:.2f}GB, usable={usable_gb:.2f}GB"
+                f"GPU memory insufficient for embedding: required={required_gb:.2f}GB, usable={usable_gb:.2f}GB"
             )
             return False
 
+        assert self._embedding_model is not None
         self._embedding_model.to("cuda")
         self._embedding_on_gpu = True
 
@@ -126,6 +126,7 @@ class VectorRetriever(BaseRetriever):
         if not self._embedding_on_gpu:
             return True
 
+        assert self._embedding_model is not None
         self._embedding_model.to("cpu")
         self._embedding_on_gpu = False
 
@@ -142,14 +143,10 @@ class VectorRetriever(BaseRetriever):
         """Check if embedding model is on GPU."""
         return self._embedding_on_gpu
 
-    async def retrieve(
-        self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None
-    ) -> list[RetrievedNode]:
+    async def retrieve(self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None) -> list[RetrievedNode]:
         try:
             loop = asyncio.get_running_loop()
-            query_vector = await loop.run_in_executor(
-                None, lambda: self.embedding_model.encode(query).tolist()
-            )
+            query_vector = await loop.run_in_executor(None, lambda: self.embedding_model.encode(query).tolist())
 
             search_filter = self._build_filter(filters) if filters else None
 
@@ -192,9 +189,7 @@ class VectorRetriever(BaseRetriever):
         if nodes_to_encode:
             texts = [node.content for node in nodes_to_encode]
             loop = asyncio.get_running_loop()
-            embeddings = await loop.run_in_executor(
-                None, self._encode_batch, texts
-            )
+            embeddings = await loop.run_in_executor(None, self._encode_batch, texts)
             # Fill in embeddings for nodes that needed encoding
             for i, node in enumerate(nodes_to_encode):
                 node.metadata["embedding"] = embeddings[i]
@@ -236,7 +231,7 @@ class VectorRetriever(BaseRetriever):
         try:
             result = self.client.delete(
                 collection_name=self.collection_name,
-                points_selector=PointIdsList(points=ids),
+                points_selector=PointIdsList(points=ids),  # type: ignore[arg-type]
             )
             logger.info(f"Qdrant delete result: {result}")
         except Exception as e:
@@ -250,17 +245,13 @@ class VectorRetriever(BaseRetriever):
 
         Returns the number of deleted points.
         """
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
 
         logger.info(f"VectorRetriever.delete_by_doc_id called for doc_id: {doc_id}")
         try:
             result = self.client.delete(
                 collection_name=self.collection_name,
-                points_selector=Filter(
-                    must=[
-                        FieldCondition(key="doc_id", match=MatchValue(value=doc_id))
-                    ]
-                ),
+                points_selector=Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]),
             )
             logger.info(f"Qdrant delete_by_doc_id result: {result}")
             # Note: result may not have count, but operation succeeded if no exception
@@ -279,35 +270,31 @@ class VectorRetriever(BaseRetriever):
             conditions = []
 
             if "doc_id" in filters:
-                conditions.append(
-                    FieldCondition(key="doc_id", match=MatchValue(value=filters["doc_id"]))
-                )
+                conditions.append(FieldCondition(key="doc_id", match=MatchValue(value=filters["doc_id"])))
 
             if "source_file" in filters:
                 conditions.append(
                     FieldCondition(
-                        key="source_file", match=MatchValue(value=filters["source_file"])
+                        key="source_file",
+                        match=MatchValue(value=filters["source_file"]),
                     )
                 )
 
             if "heading_id" in filters:
-                conditions.append(
-                    FieldCondition(
-                        key="heading_id", match=MatchValue(value=filters["heading_id"])
-                    )
-                )
+                conditions.append(FieldCondition(key="heading_id", match=MatchValue(value=filters["heading_id"])))
 
             if "content_type" in filters:
                 conditions.append(
                     FieldCondition(
-                        key="content_type", match=MatchValue(value=filters["content_type"])
+                        key="content_type",
+                        match=MatchValue(value=filters["content_type"]),
                     )
                 )
 
             if not conditions:
                 return None
 
-            return Filter(must=conditions)
+            return Filter(must=conditions)  # type: ignore[arg-type]
 
         except Exception as e:
             logger.warning(f"Failed to build filter: {e}")

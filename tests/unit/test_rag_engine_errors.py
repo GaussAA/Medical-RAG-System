@@ -1,8 +1,7 @@
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.core.rag_engine import RAGEngine
 from app.core.metrics import ERROR_COUNT
+from app.core.rag_engine import RAGEngine
 from app.models.schemas import QueryRequest, SafetyResult
 
 
@@ -21,18 +20,12 @@ class TestRAGEngineErrorClassification:
         request = self._create_query_request()
 
         with patch.object(self.engine, "_safety_check") as mock_safety:
-            mock_safety.return_value = SafetyResult(
-                passed=True, sanitized_text="test", risk_level="low"
-            )
+            mock_safety.return_value = SafetyResult(passed=True, sanitized_text="test", risk_level="low")
 
-            with patch.object(
-                self.engine, "_retrieve_and_rerank", new_callable=AsyncMock
-            ) as mock_rr:
+            with patch.object(self.engine, "_retrieve_and_rerank", new_callable=AsyncMock) as mock_rr:
                 mock_rr.side_effect = RuntimeError("GPU OOM")
 
-                with patch.object(
-                    self.engine, "_create_error_response"
-                ) as mock_error_resp:
+                with patch.object(self.engine, "_create_error_response") as mock_error_resp:
                     mock_error_resp.return_value = MagicMock()
 
                     await self.engine.query(request)
@@ -47,23 +40,15 @@ class TestRAGEngineErrorClassification:
         request = self._create_query_request()
 
         with patch.object(self.engine, "_safety_check") as mock_safety:
-            mock_safety.return_value = SafetyResult(
-                passed=True, sanitized_text="test", risk_level="low"
-            )
+            mock_safety.return_value = SafetyResult(passed=True, sanitized_text="test", risk_level="low")
 
-            with patch.object(
-                self.engine, "_retrieve_and_rerank", new_callable=AsyncMock
-            ) as mock_rr:
+            with patch.object(self.engine, "_retrieve_and_rerank", new_callable=AsyncMock) as mock_rr:
                 mock_rr.return_value = [MagicMock()]
 
-                with patch.object(
-                    self.engine, "_generate_answer", new_callable=AsyncMock
-                ) as mock_gen:
+                with patch.object(self.engine, "_generate_answer", new_callable=AsyncMock) as mock_gen:
                     mock_gen.side_effect = Exception("Rate limit exceeded")
 
-                    with patch.object(
-                        self.engine, "_create_error_response"
-                    ) as mock_error_resp:
+                    with patch.object(self.engine, "_create_error_response") as mock_error_resp:
                         mock_error_resp.return_value = MagicMock()
 
                         await self.engine.query(request)
@@ -76,14 +61,10 @@ class TestRAGEngineErrorClassification:
         """Unexpected exceptions should record error_type='validation'"""
         request = self._create_query_request()
 
-        with patch.object(
-            self.engine, "_safety_check"
-        ) as mock_safety:
+        with patch.object(self.engine, "_safety_check") as mock_safety:
             mock_safety.side_effect = AttributeError("unexpected bug")
 
-            with patch.object(
-                self.engine, "_create_error_response"
-            ) as mock_error_resp:
+            with patch.object(self.engine, "_create_error_response") as mock_error_resp:
                 mock_error_resp.return_value = MagicMock()
 
                 await self.engine.query(request)

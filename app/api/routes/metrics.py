@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Response
 
-from app.core.metrics import get_metrics, get_content_type
+from app.core.metrics import get_content_type, get_metrics
 
 router = APIRouter(tags=["metrics"])
 

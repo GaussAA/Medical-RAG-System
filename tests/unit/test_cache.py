@@ -1,14 +1,14 @@
 import json
-
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.core.cache import CacheManager, CacheManagerSync, make_cache_key, cached
+import pytest
 
+from app.core.cache import CacheManager, CacheManagerSync, cached, make_cache_key
 
 # ============================================================================
 # TestMakeCacheKey
 # ============================================================================
+
 
 class TestMakeCacheKey:
     def test_cache_key_format(self):
@@ -107,6 +107,7 @@ class TestMakeCacheKey:
 
     def test_consistent_non_serializable(self):
         """Test consistent output for same non-serializable input type."""
+
         # A custom class instance with the same str() output produces same key
         class MyObj:
             def __str__(self):
@@ -120,6 +121,7 @@ class TestMakeCacheKey:
 # ============================================================================
 # TestCacheManager
 # ============================================================================
+
 
 class TestCacheManager:
     def setup_method(self):
@@ -320,9 +322,10 @@ class TestCacheManager:
         mock_settings.database.redis.db = 0
         mock_settings.database.redis.password = ""
 
-        with patch(
-            "app.core.cache.get_settings", return_value=mock_settings
-        ), patch("app.core.cache.redis.Redis", return_value=mock_redis_client):
+        with (
+            patch("app.core.cache.get_settings", return_value=mock_settings),
+            patch("app.core.cache.redis.Redis", return_value=mock_redis_client),
+        ):
             client = await manager._ensure_client()
 
         assert client is mock_redis_client
@@ -332,6 +335,7 @@ class TestCacheManager:
 # ============================================================================
 # TestCacheManagerSync
 # ============================================================================
+
 
 class TestCacheManagerSync:
     def setup_method(self):
@@ -463,9 +467,10 @@ class TestCacheManagerSync:
         mock_settings.database.redis.db = 0
         mock_settings.database.redis.password = ""
 
-        with patch(
-            "app.core.cache.get_settings", return_value=mock_settings
-        ), patch("app.core.cache.redis.Redis", return_value=mock_redis_client):
+        with (
+            patch("app.core.cache.get_settings", return_value=mock_settings),
+            patch("app.core.cache.redis.Redis", return_value=mock_redis_client),
+        ):
             client = manager._ensure_client()
 
         assert client is mock_redis_client
@@ -475,6 +480,7 @@ class TestCacheManagerSync:
 # ============================================================================
 # TestCachedDecorator
 # ============================================================================
+
 
 class TestCachedDecorator:
     def setup_method(self):
@@ -500,7 +506,6 @@ class TestCachedDecorator:
     @pytest.mark.asyncio
     async def test_cached_cache_hit(self):
         """Test that cached decorator returns cached value on cache hit."""
-        import json as json_mod
 
         call_count = 0
         cached_value = {"result": "from_cache", "score": 0.95}
@@ -516,9 +521,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=cached_value)
         mock_manager.set = AsyncMock()
 
-        with patch(
-            "app.core.cache.CacheManager.get_instance", return_value=mock_manager
-        ):
+        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
             result = await expensive_function("test_query")
 
         assert result == cached_value
@@ -542,9 +545,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=None)  # cache miss
         mock_manager.set = AsyncMock()
 
-        with patch(
-            "app.core.cache.CacheManager.get_instance", return_value=mock_manager
-        ):
+        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
             result = await expensive_function("test_query")
 
         assert result == expected_result
@@ -567,9 +568,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=None)  # cache miss
         mock_manager.set = AsyncMock()
 
-        with patch(
-            "app.core.cache.CacheManager.get_instance", return_value=mock_manager
-        ):
+        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
             result = await returns_none("test_query")
 
         assert result is None
@@ -581,8 +580,8 @@ class TestCachedDecorator:
     async def test_cached_cache_key_uniqueness(self):
         """Test that different function args produce different cache lookups."""
         call_count = 0
-        first_result = {"result": "first"}
-        second_result = {"result": "second"}
+        _first_result = {"result": "first"}
+        _second_result = {"result": "second"}
 
         @cached("test", ttl=60)
         async def func(query: str):
@@ -594,11 +593,9 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=None)  # always miss
         mock_manager.set = AsyncMock()
 
-        with patch(
-            "app.core.cache.CacheManager.get_instance", return_value=mock_manager
-        ):
-            r1 = await func("query_a")
-            r2 = await func("query_b")
+        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
+            _r1 = await func("query_a")
+            _r2 = await func("query_b")
 
         # Both calls should have produced different cache keys
         assert call_count == 2

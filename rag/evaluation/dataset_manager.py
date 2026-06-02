@@ -1,16 +1,16 @@
 """Dataset management for RAG evaluation datasets."""
 
-from dataclasses import dataclass, asdict
-from pathlib import Path
-from typing import Any
-import json
 import hashlib
+import json
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
 
 
 @dataclass
 class ValidationReport:
     """验证报告"""
+
     is_valid: bool
     errors: list[str]
     warnings: list[str]
@@ -21,7 +21,14 @@ class DatasetValidator:
     """数据集验证器"""
 
     REQUIRED_FIELDS = ["query_id", "query_text"]
-    OPTIONAL_FIELDS = ["query_type", "relevant_doc_ids", "expected_keywords", "reference_answer", "difficulty", "safety_sensitive"]
+    OPTIONAL_FIELDS = [
+        "query_type",
+        "relevant_doc_ids",
+        "expected_keywords",
+        "reference_answer",
+        "difficulty",
+        "safety_sensitive",
+    ]
 
     def validate(self, dataset: list[dict]) -> ValidationReport:
         """验证数据集"""
@@ -53,9 +60,13 @@ class DatasetValidator:
             seen_ids.add(qid)
 
         # 检查类型分布
-        query_types = [item.get("query_type") for item in dataset if item.get("query_type")]
+        query_types: list[str] = []
+        for item in dataset:
+            qt = item.get("query_type")
+            if isinstance(qt, str):
+                query_types.append(qt)
         if query_types:
-            type_dist = {}
+            type_dist: dict[str, int] = {}
             for qt in query_types:
                 type_dist[qt] = type_dist.get(qt, 0) + 1
             if len(type_dist) < 2:
@@ -72,6 +83,7 @@ class DatasetValidator:
 @dataclass
 class DatasetMetadata:
     """数据集元信息"""
+
     dataset_id: str
     name: str
     version: str

@@ -1,32 +1,45 @@
 # tests/integration/test_full_pipeline.py
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from httpx import AsyncClient, ASGITransport
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
-from app.models.schemas import QueryResponse, Citation, RiskWarning, ConversationSession, Message
+from app.models.schemas import (
+    Citation,
+    ConversationSession,
+    Message,
+    QueryResponse,
+    RiskWarning,
+)
 
 
 @pytest.fixture
 def mock_app_state():
     """Create a mock app state with required services."""
     mock_session_manager = MagicMock()
-    mock_session_manager.create_session_db = AsyncMock(return_value=ConversationSession(
-        session_id="test-session-id",
-        session_title=None,
-        messages=[],
-        is_active=True,
-    ))
-    mock_session_manager.add_message = AsyncMock(return_value=Message(
-        message_id="test-message-id",
-        role="user",
-        content="test",
-    ))
-    mock_session_manager.get_session = MagicMock(return_value=ConversationSession(
-        session_id="test-session-id",
-        messages=[],
-        is_active=True,
-    ))
+    mock_session_manager.create_session_db = AsyncMock(
+        return_value=ConversationSession(
+            session_id="test-session-id",
+            session_title=None,
+            messages=[],
+            is_active=True,
+        )
+    )
+    mock_session_manager.add_message = AsyncMock(
+        return_value=Message(
+            message_id="test-message-id",
+            role="user",
+            content="test",
+        )
+    )
+    mock_session_manager.get_session = MagicMock(
+        return_value=ConversationSession(
+            session_id="test-session-id",
+            messages=[],
+            is_active=True,
+        )
+    )
 
     mock_document_service = MagicMock()
     mock_document_service.process_document = AsyncMock(return_value=True)
@@ -54,8 +67,11 @@ async def client(mock_app_state):
 async def test_full_query_pipeline(client):
     """Test complete flow: upload -> index -> query -> generate."""
     # Mock document processing
-    with patch("app.services.document.DocumentService.process_document",
-               new_callable=AsyncMock, return_value=True):
+    with patch(
+        "app.services.document.DocumentService.process_document",
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
         doc_response = await client.post(
             "/api/v1/documents/upload",
             files={"file": ("test.md", b"# Test\n\nMedical content here.", "text/markdown")},
@@ -63,8 +79,7 @@ async def test_full_query_pipeline(client):
     assert doc_response.status_code == 200
 
     # Mock query response
-    with patch("app.core.rag_engine.RAGEngine.query",
-               new_callable=AsyncMock) as mock_query:
+    with patch("app.core.rag_engine.RAGEngine.query", new_callable=AsyncMock) as mock_query:
         mock_query.return_value = QueryResponse(
             answer="Test answer",
             confidence=0.9,
@@ -103,8 +118,7 @@ async def test_query_with_citations(client):
         )
     ]
 
-    with patch("app.core.rag_engine.RAGEngine.query",
-               new_callable=AsyncMock) as mock_query:
+    with patch("app.core.rag_engine.RAGEngine.query", new_callable=AsyncMock) as mock_query:
         mock_query.return_value = QueryResponse(
             answer="Based on the document, medical content is important.",
             confidence=0.85,
@@ -136,8 +150,7 @@ async def test_query_with_warnings(client):
         )
     ]
 
-    with patch("app.core.rag_engine.RAGEngine.query",
-               new_callable=AsyncMock) as mock_query:
+    with patch("app.core.rag_engine.RAGEngine.query", new_callable=AsyncMock) as mock_query:
         mock_query.return_value = QueryResponse(
             answer="Some medication-related answer.",
             confidence=0.75,

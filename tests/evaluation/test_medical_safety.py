@@ -1,7 +1,5 @@
 """Tests for medical safety evaluation module."""
 
-import pytest
-
 from rag.evaluation.medical_safety_eval import (
     MedicalSafetyEvaluator,
     MedicalSafetyMetrics,
@@ -172,7 +170,11 @@ class TestMedicalSafetyMetrics:
         """Test creating MedicalSafetyMetrics with specific values."""
         metrics = MedicalSafetyMetrics(
             entity_accuracy=0.9,
-            warning_coverage={"medication": True, "diagnosis": False, "emergency": False},
+            warning_coverage={
+                "medication": True,
+                "diagnosis": False,
+                "emergency": False,
+            },
             contradiction_detected=False,
             safety_score=0.85,
         )

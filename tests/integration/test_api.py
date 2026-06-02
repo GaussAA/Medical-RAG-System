@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+
 from fastapi.testclient import TestClient
 
 # Mock the app state before importing app
@@ -8,28 +9,34 @@ app = create_app()
 
 # Set up mock session_manager and document_service
 mock_session_manager = MagicMock()
-mock_session_manager.create_session_db = AsyncMock(return_value=MagicMock(
-    session_id="test-session-id",
-    session_title=None,
-    created_at=MagicMock(),
-    updated_at=MagicMock(),
-    messages=[],
-    context_documents=[],
-    is_active=True,
-))
-mock_session_manager.add_message = AsyncMock(return_value=MagicMock(
-    message_id="test-message-id",
-    role="user",
-    content="test",
-    timestamp=MagicMock(),
-    metadata={},
-))
-mock_session_manager.get_session = MagicMock(return_value=MagicMock(
-    session_id="test-session-id",
-    session_title=None,
-    messages=[],
-    is_active=True,
-))
+mock_session_manager.create_session_db = AsyncMock(
+    return_value=MagicMock(
+        session_id="test-session-id",
+        session_title=None,
+        created_at=MagicMock(),
+        updated_at=MagicMock(),
+        messages=[],
+        context_documents=[],
+        is_active=True,
+    )
+)
+mock_session_manager.add_message = AsyncMock(
+    return_value=MagicMock(
+        message_id="test-message-id",
+        role="user",
+        content="test",
+        timestamp=MagicMock(),
+        metadata={},
+    )
+)
+mock_session_manager.get_session = MagicMock(
+    return_value=MagicMock(
+        session_id="test-session-id",
+        session_title=None,
+        messages=[],
+        is_active=True,
+    )
+)
 mock_session_manager.delete_session = AsyncMock(return_value=True)
 
 mock_document_service = MagicMock()

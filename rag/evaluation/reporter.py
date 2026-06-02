@@ -4,11 +4,11 @@ Provides reporting capabilities for RAG evaluation results.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from rag.evaluation.evaluator import RAGEvaluationResult
 from rag.evaluation.benchmark_runner import BenchmarkResult
+from rag.evaluation.evaluator import RAGEvaluationResult
 
 
 @dataclass
@@ -70,7 +70,7 @@ class EvaluationReporter:
 
         # Convert list of results
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total_queries": len(results),
             "results": [r.to_dict() for r in results],
             "summary": self._generate_summary_dict(results),
@@ -159,7 +159,9 @@ class EvaluationReporter:
             avg_answer_relevancy=sum(r.answer_relevancy for r in results) / n,
             avg_citation_accuracy=sum(r.citation_accuracy for r in results) / n,
             avg_hallucination_ratio=sum(r.hallucination_ratio for r in results) / n,
-            avg_safety_score=sum(r.safety_score for r in results if r.safety_score > 0) / n if any(r.safety_score > 0 for r in results) else 0.0,
+            avg_safety_score=sum(r.safety_score for r in results if r.safety_score > 0) / n
+            if any(r.safety_score > 0 for r in results)
+            else 0.0,
             avg_overall_score=sum(overall_scores) / n,
             min_overall_score=min(overall_scores),
             max_overall_score=max(overall_scores),

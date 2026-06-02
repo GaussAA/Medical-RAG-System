@@ -1,9 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
-from app.services.session import SessionManager
+import pytest
+
 from app.models.schemas import Message
+from app.services.session import SessionManager
 
 
 class TestSessionManager:
@@ -171,9 +171,7 @@ class TestSessionManager:
             MagicMock(content="多饮多尿"),
         ]
 
-        retrieved_docs = [
-            {"source": "指南", "content": "糖尿病典型症状是多饮、多尿、多食、体重下降"}
-        ]
+        retrieved_docs = [{"source": "指南", "content": "糖尿病典型症状是多饮、多尿、多食、体重下降"}]
 
         context = self.manager.build_context(
             session_id=session.session_id,
@@ -308,7 +306,12 @@ class TestFormatDocuments:
 
     def test_single_doc(self):
         """Single document formatted with index and source."""
-        docs = [{"source": "糖尿病指南.pdf", "content": "糖尿病典型症状是多饮、多尿、多食、体重下降"}]
+        docs = [
+            {
+                "source": "糖尿病指南.pdf",
+                "content": "糖尿病典型症状是多饮、多尿、多食、体重下降",
+            }
+        ]
         result = self.manager._format_documents(docs)
         assert "[1] 糖尿病指南.pdf:" in result
         assert "糖尿病典型症状" in result
@@ -452,11 +455,11 @@ class TestFilterRelevantHistory:
         """Only last max_history messages are scored."""
         manager = SessionManager(max_history=3)
         msgs = [
-            Message(role="user", content="diabetes symptoms"),     # old, outside window
-            Message(role="assistant", content="common signs"),     # old, outside window
-            Message(role="user", content="x y z"),                 # inside window
-            Message(role="assistant", content="no match here"),    # inside window
-            Message(role="user", content="diabetes again"),        # inside window, relevant
+            Message(role="user", content="diabetes symptoms"),  # old, outside window
+            Message(role="assistant", content="common signs"),  # old, outside window
+            Message(role="user", content="x y z"),  # inside window
+            Message(role="assistant", content="no match here"),  # inside window
+            Message(role="user", content="diabetes again"),  # inside window, relevant
         ]
         result = manager._filter_relevant_history("diabetes symptoms", msgs)
         # Only last 3 scored. "diabetes again" has overlap with "diabetes" (1/2=0.5 >= 0.3)
@@ -473,7 +476,8 @@ class TestFilterRelevantHistory:
         ]
         # Query: "diabetes symptoms causes" → 3 terms
         # msg1: {"diabetes", "only"} ∩ {"diabetes", "symptoms", "causes"} = {"diabetes"} → 1/3 = 0.33 >= 0.3
-        # msg2: {"diabetes", "symptoms", "treatment"} ∩ {"diabetes", "symptoms", "causes"} = {"diabetes", "symptoms"} → 2/3 = 0.67 >= 0.3
+        # msg2: {"diabetes", "symptoms", "treatment"} ∩ {"diabetes", "symptoms", "causes"}
+        #   = {"diabetes", "symptoms"} → 2/3 = 0.67 >= 0.3
         result = self.manager._filter_relevant_history("diabetes symptoms causes", msgs)
         assert len(result) == 2
 
@@ -619,7 +623,12 @@ class TestBuildContextDetailed:
         session.messages = [
             Message(role="user", content="hello world this is a long message"),
         ]
-        docs = [{"source": "doc", "content": "very long document content that exceeds limits"}]
+        docs = [
+            {
+                "source": "doc",
+                "content": "very long document content that exceeds limits",
+            }
+        ]
 
         context = manager.build_context(session.session_id, "hello world", docs)
         # Should be truncated
@@ -708,6 +717,7 @@ class TestSessionManagerEdgeCases:
         """add_message loads session from DB when not in memory."""
         # Use a UUID that doesn't exist in sessions dict
         import uuid as uuid_mod
+
         test_id = str(uuid_mod.uuid4())
 
         # Mock the DB returning a Conversation row
@@ -743,9 +753,7 @@ class TestSessionManagerEdgeCases:
 
         assert len(session.messages) > self.manager.MAX_SESSION_MESSAGES
 
-        await self.manager._evict_messages_if_needed(
-            session.session_id, self.mock_session
-        )
+        await self.manager._evict_messages_if_needed(session.session_id, self.mock_session)
 
         # After eviction, message count should be <= MAX
         assert len(session.messages) <= self.manager.MAX_SESSION_MESSAGES
@@ -762,9 +770,7 @@ class TestSessionManagerEdgeCases:
         session.msg_count = 2
 
         original_len = len(session.messages)
-        await self.manager._evict_messages_if_needed(
-            session.session_id, self.mock_session
-        )
+        await self.manager._evict_messages_if_needed(session.session_id, self.mock_session)
 
         assert len(session.messages) == original_len
 

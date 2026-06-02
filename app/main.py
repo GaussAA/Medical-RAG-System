@@ -1,25 +1,28 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from loguru import logger
 
+# Rate limiter instance
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
 from app.api.deps import limiter
-from app.api.routes import query, documents, sessions, evaluation  # noqa: F401
-from app.api.routes import metrics as metrics_router
+from app.api.routes import documents, evaluation, query, sessions  # noqa: F401
 from app.api.routes import health as health_router
-from app.core.database import close_engine, get_session_factory, _ensure_engine_initialized
+from app.api.routes import metrics as metrics_router
+from app.core.database import (
+    _ensure_engine_initialized,
+    close_engine,
+    get_session_factory,
+)
 from app.services.document import DocumentService
 from app.services.session import SessionManager
 from config.settings import get_settings
-
-# Rate limiter instance
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -93,7 +96,7 @@ def create_app() -> FastAPI:
 
     # Add rate limiter
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     # Add security headers
     app.add_middleware(SecurityHeadersMiddleware)
