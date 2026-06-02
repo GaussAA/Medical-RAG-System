@@ -131,8 +131,12 @@ class RAGEvaluator:
         """
         result = RAGEvaluationResult(query_id=getattr(ground_truth, "query_id", "unknown"))
 
-        # Extract contexts from citations or response
+        # Extract contexts from response metadata or citations
         contexts = self._extract_contexts(response)
+
+        # Auto-extract retrieved doc IDs from response metadata if not provided
+        if not retrieved_doc_ids and response.metadata:
+            retrieved_doc_ids = response.metadata.get("retrieved_doc_ids") or response.metadata.get("retrieved_node_ids") or []
 
         # Retrieval evaluation
         retrieval_metrics = self._evaluate_retrieval(
@@ -177,17 +181,25 @@ class RAGEvaluator:
             "confidence": response.confidence,
             "retrieved_chunks": response.metadata.get("retrieved_chunks", 0),
             "processing_time": response.processing_time,
+            "retrieved_uuids": len(retrieved_doc_ids or []),
+            "gt_uuids": len(ground_truth.relevant_doc_ids) if ground_truth else 0,
         }
 
         return result
 
     def _extract_contexts(self, response: QueryResponse) -> list[str]:
-        """Extract context strings from response citations."""
+        """Extract context strings from response metadata or citations."""
+        # Priority 1: retrieved_contents from metadata (set by RAGEngine for evaluation)
+        if response.metadata and response.metadata.get("retrieved_contents"):
+            return list(response.metadata["retrieved_contents"])
+
+        # Priority 2: citation chunk_content
         contexts = []
         for citation in response.citations:
             chunk = getattr(citation, "chunk_content", None)
             if chunk:
                 contexts.append(chunk)
+
         return contexts
 
     def _evaluate_retrieval(
@@ -206,8 +218,8 @@ class RAGEvaluator:
         Returns:
             RetrievalMetrics with computed metrics.
         """
-        # If we have ground truth, use full evaluation
-        if ground_truth and retrieved_doc_ids:
+        # If we have ground truth with actual relevant IDs, use full evaluation
+        if ground_truth and ground_truth.relevant_doc_ids and retrieved_doc_ids:
             return self.retrieval_evaluator.evaluate(
                 retrieved_ids=retrieved_doc_ids,
                 ground_truth_ids=ground_truth.relevant_doc_ids,

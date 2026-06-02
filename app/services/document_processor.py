@@ -34,7 +34,7 @@ class DocumentProcessor:
         nodes = []
         for i, chunk in enumerate(chunks):
             node = RetrievedNode(
-                node_id=f"{doc_id}_{i}",
+                node_id=chunk.chunk_id,  # Use UUID from chunk (matches PostgreSQL)
                 content=chunk.content,
                 score=1.0,
                 metadata={

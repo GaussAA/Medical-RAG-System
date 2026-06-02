@@ -33,7 +33,7 @@ class TestDocumentProcessor:
         ]
         nodes = self.processor.create_retrieved_nodes("doc-1", chunks, "test.txt")
         assert len(nodes) == 1
-        assert nodes[0].node_id == "doc-1_0"
+        assert nodes[0].node_id == "chunk-1"
         assert nodes[0].content == "糖尿病诊断标准"
 
     def test_save_processed_text(self, tmp_path):

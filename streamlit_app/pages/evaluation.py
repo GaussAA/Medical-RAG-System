@@ -4,11 +4,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-import json
 import requests
 import streamlit as st
 
 API_BASE = "http://localhost:8000/api/v1"
+
+
+@st.cache_data(ttl=60)
+def _load_document_titles() -> list[str]:
+    """Load document titles from API for the document selector."""
+    try:
+        resp = requests.get(f"{API_BASE}/documents?page_size=100", timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            docs = data.get("documents", [])
+            return [doc["title"] for doc in docs]
+    except Exception:
+        pass
+    return []
 
 st.set_page_config(page_title="评估中心", page_icon="📊")
 st.title("📊 RAG 评估中心")
@@ -139,7 +152,14 @@ def run_single_evaluation():
     with st.form("single_eval_form"):
         query = st.text_area("输入查询", height=100)
         reference_answer = st.text_area("参考答案（可选）", height=100)
-        expected_doc_ids = st.text_input("期望文档ID（逗号分隔，可选）")
+
+        # Load existing documents for the document selector
+        doc_titles = _load_document_titles()
+        selected_docs = st.multiselect(
+            "期望文档（选择后自动匹配其所有分块作为 ground truth）",
+            options=doc_titles,
+            placeholder="搜索或选择文档...",
+        )
 
         submitted = st.form_submit_button("运行评估")
         if submitted and query:
@@ -147,12 +167,8 @@ def run_single_evaluation():
                 try:
                     payload = {
                         "query": query,
-                        "reference_answer": reference_answer if reference_answer else None,
-                        "expected_doc_ids": (
-                            [d.strip() for d in expected_doc_ids.split(",")]
-                            if expected_doc_ids
-                            else None
-                        ),
+                        "expected_answer": reference_answer if reference_answer else None,
+                        "relevant_doc_ids": selected_docs,
                     }
 
                     response = requests.post(
@@ -248,10 +264,28 @@ def view_history():
         if response.status_code == 200:
             data = response.json()
             history = data.get("history", [])
+            total = data.get("total", 0)
 
             if not history:
                 st.info("暂无评估历史")
                 return
+
+            # Top toolbar: total count + export button
+            col_total, col_export = st.columns([3, 1])
+            with col_total:
+                st.caption(f"共 {total} 条评估记录")
+            with col_export:
+                import json as _json
+                json_bytes = _json.dumps(history, ensure_ascii=False, indent=2).encode("utf-8")
+                st.download_button(
+                    label="📥 导出 JSON",
+                    data=json_bytes,
+                    file_name="evaluation_history.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+
+            st.divider()
 
             for item in history:
                 timestamp = item.get("timestamp", "")

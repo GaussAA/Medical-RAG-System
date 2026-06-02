@@ -147,19 +147,22 @@ class BenchmarkRunner:
 
     async def run(
         self,
-        _evaluator: RAGEvaluator,
+        evaluator: RAGEvaluator,
         dataset_path: str | None = None,
         queries_data: list[dict[str, Any]] | None = None,
         sample_size: int | None = None,
+        rag_engine: Any | None = None,
     ) -> BenchmarkResult:
         """
-        Run benchmark evaluation.
+        Run benchmark evaluation with RAG engine.
 
         Args:
             evaluator: RAGEvaluator instance.
             dataset_path: Path to dataset JSON file.
             queries_data: Alternative to dataset_path - list of query dicts.
             sample_size: Optional limit on number of queries to evaluate.
+            rag_engine: Optional RAGEngine instance. If provided, queries will
+                       be executed against it for end-to-end evaluation.
 
         Returns:
             BenchmarkResult with aggregated metrics.
@@ -177,14 +180,18 @@ class BenchmarkRunner:
                 )
                 for i, q in enumerate(queries_data)
             ]
+            query_texts = [q.get("query") or q.get("query_text") or "" for q in queries_data]
         else:
             ground_truths = self.load_dataset(dataset_path)
+            query_texts = [gt.query_id for gt in ground_truths]
 
         # Apply sampling
         if sample_size:
             ground_truths = ground_truths[:sample_size]
+            query_texts = query_texts[:sample_size]
         elif self.config.sample_size:
             ground_truths = ground_truths[:self.config.sample_size]
+            query_texts = query_texts[:self.config.sample_size]
 
         dataset_name = Path(dataset_path or self.config.dataset_path).stem
         benchmark_id = f"benchmark_{dataset_name}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
@@ -195,22 +202,44 @@ class BenchmarkRunner:
             total_queries=len(ground_truths),
         )
 
-        # Run evaluation for each query
-        for gt in ground_truths:
-            try:
-                # For benchmark, we need query text and expected behavior
-                # In real usage, queries_data would contain query_text
-                # For now, we create a placeholder result structure
-                logger.debug(f"Evaluating query: {gt.query_id}")
+        if rag_engine:
+            # Execute each query against the RAG engine and evaluate
+            from app.models.schemas import QueryRequest
 
-            except Exception as e:
-                logger.error(f"Failed to evaluate query {gt.query_id}: {e}")
-                result.failed_evaluations += 1
-                if self.config.include_failed_cases:
-                    result.failed_cases.append({
-                        "query_id": gt.query_id,
-                        "error": str(e),
-                    })
+            eval_results = []
+            for i, gt in enumerate(ground_truths):
+                try:
+                    query_text = query_texts[i] if i < len(query_texts) else ""
+                    if not query_text:
+                        logger.warning(f"Empty query text for {gt.query_id}")
+                        result.failed_evaluations += 1
+                        continue
+
+                    query_req = QueryRequest(question=query_text)
+                    response = await rag_engine.query(query_req)
+
+                    eval_result = await evaluator.evaluate(
+                        query=query_text,
+                        response=response,
+                        ground_truth=gt,
+                    )
+                    eval_results.append(eval_result)
+                    result.successful_evaluations += 1
+
+                except Exception as e:
+                    logger.error(f"Failed to evaluate query {gt.query_id}: {e}")
+                    result.failed_evaluations += 1
+                    if self.config.include_failed_cases:
+                        result.failed_cases.append({
+                            "query_id": gt.query_id,
+                            "error": str(e),
+                        })
+
+            result.results = eval_results
+        else:
+            # Fallback: without rag_engine, only collect metadata
+            for gt in ground_truths:
+                logger.debug(f"Evaluating query (metadata only): {gt.query_id}")
 
         # Calculate aggregated statistics
         self._calculate_statistics(result)

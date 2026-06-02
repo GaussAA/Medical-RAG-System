@@ -205,6 +205,12 @@ class RAGEngine:
                     },
                 )
 
+            # Include retrieved node info in metadata for evaluation
+            # Use doc_id (UUID matching PostgreSQL) for document-level comparison
+            node_ids = [n.node_id for n in reranked_nodes]
+            doc_ids = list(dict.fromkeys(n.metadata.get("doc_id", "") for n in reranked_nodes))
+            node_contents = [n.content[:1000] for n in reranked_nodes[:5]]
+
             return QueryResponse(
                 answer=llm_result["answer"],
                 confidence=confidence_result["confidence"],
@@ -214,6 +220,9 @@ class RAGEngine:
                 processing_time=round(processing_time, 2),
                 metadata={
                     "retrieved_chunks": len(reranked_nodes),
+                    "retrieved_node_ids": node_ids,
+                    "retrieved_contents": node_contents,
+                    "retrieved_doc_ids": doc_ids,
                     "context_relevance": confidence_result["context_relevance"],
                     "answer_completeness": confidence_result["answer_completeness"],
                     "tokens_used": llm_result.get("usage", {}),
