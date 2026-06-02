@@ -83,7 +83,7 @@ async def test_full_query_pipeline(client):
 @pytest.mark.asyncio
 async def test_health_endpoint(client):
     """Test health endpoint returns OK."""
-    response = await client.get("/health")
+    response = await client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
