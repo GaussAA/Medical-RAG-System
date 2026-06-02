@@ -32,11 +32,12 @@ def render_citations(citations: list[dict]):
             if verification_msg := citation.get("verification_message"):
                 st.info(f"说明: {verification_msg}")
 
-            # Show chunk content - collapsible
+            # Show chunk content - scrollable collapsible
             chunk = citation.get("chunk_content", "")
             if chunk:
                 with st.expander("📄 查看文档片段"):
-                    st.markdown(chunk)
+                    with st.container(height=200):
+                        st.markdown(chunk)
 
             st.divider()
 

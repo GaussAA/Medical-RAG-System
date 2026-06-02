@@ -49,10 +49,11 @@ def render_source_card(
             status_color = "green" if verification_status == "verified" else "orange"
             st.markdown(f":{status_color}[{verification_status}]")
 
-        # Chunk content
+        # Chunk content - scrollable collapsible
         if chunk_content:
             with st.expander("查看内容", expanded=expanded):
-                st.markdown(chunk_content)
+                with st.container(height=200):
+                    st.markdown(chunk_content)
 
         st.divider()
 

@@ -70,7 +70,8 @@ def _render_citations_list(citations: list[dict]):
 
             if chunk := citation.get("chunk_content"):
                 with st.expander("查看文档片段"):
-                    st.markdown(chunk)
+                    with st.container(height=200):
+                        st.markdown(chunk)
 
 
 def _render_warnings_list(warnings: list[dict]):
