@@ -292,6 +292,102 @@ class TestExtractAndVerifyChineseQuoteFormat:
         assert len(direct_verified) == 2
 
 
+class TestExtractAndVerifySimpleFormat:
+    """Tests for simple 「来源X」 format (no parenthesized file name).
+
+    This is the format the prompt actually instructs the LLM to use:
+    "使用「来源X」格式". Previously, the verifier only checked patterns
+    with parenthesized file info, so all simple-format citations were
+    missed and ALL contexts were incorrectly flagged as "未在回答中引用".
+    """
+
+    def setup_method(self):
+        self.verifier = CitationVerifier()
+
+    def test_simple_format_matches_context(self):
+        answer = "糖尿病诊断标准为空腹血糖≥7.0mmol/L「来源1」。"
+        contexts = [_make_ctx(idx="1", source_file="糖尿病指南.md")]
+
+        result = self.verifier.extract_and_verify(answer, contexts)
+
+        assert len(result) == 1
+        assert result[0].source_id == "1"
+        assert result[0].verified is True
+        assert result[0].position == CitationPosition.DIRECT
+        assert result[0].quote_in_answer == "「来源1」"
+        assert result[0].verification_message is None
+
+    def test_simple_format_multiple_citations(self):
+        answer = "空腹血糖≥7.0「来源1」，餐后2h≥11.1「来源2」。"
+        contexts = [
+            _make_ctx(idx="1", source_file="指南A.md"),
+            _make_ctx(idx="2", source_file="指南B.md"),
+        ]
+
+        result = self.verifier.extract_and_verify(answer, contexts)
+
+        direct = [c for c in result if c.position == CitationPosition.DIRECT]
+        assert len(direct) == 2
+        # No INDIRECT → all contexts were properly recognized as cited
+        indirect = [c for c in result if c.position == CitationPosition.INDIRECT]
+        assert len(indirect) == 0
+
+    def test_simple_format_no_false_uncited_message(self):
+        """When all sources are cited via simple format, none should show '未引用'."""
+        answer = "「来源1」和「来源2」都提到了这一点。"
+        contexts = [
+            _make_ctx(idx="1", source_file="文件A.md"),
+            _make_ctx(idx="2", source_file="文件B.md"),
+        ]
+
+        result = self.verifier.extract_and_verify(answer, contexts)
+
+        uncited = [c for c in result if c.verification_message and "未在回答中引用" in c.verification_message]
+        assert len(uncited) == 0
+
+    def test_simple_format_partial_citation(self):
+        """Only source 1 cited, source 2 should still show as INDIRECT."""
+        answer = "内容来自「来源1」。"
+        contexts = [
+            _make_ctx(idx="1", source_file="文件A.md"),
+            _make_ctx(idx="2", source_file="文件B.md"),
+        ]
+
+        result = self.verifier.extract_and_verify(answer, contexts)
+
+        direct = [c for c in result if c.position == CitationPosition.DIRECT]
+        indirect = [c for c in result if c.position == CitationPosition.INDIRECT]
+        assert len(direct) == 1
+        assert direct[0].source_id == "1"
+        assert len(indirect) == 1
+        assert indirect[0].source_id == "2"
+        assert "未在回答中引用" in indirect[0].verification_message
+
+    def test_simple_format_index_out_of_range(self):
+        answer = "根据「来源99」的说法。"
+        contexts = [_make_ctx(idx="1")]
+
+        result = self.verifier.extract_and_verify(answer, contexts)
+
+        hallucination = [c for c in result if c.source_id == "99"]
+        assert len(hallucination) == 1
+        assert hallucination[0].verified is False
+        assert hallucination[0].position == CitationPosition.UNVERIFIED
+        assert "幻觉" in hallucination[0].verification_message
+
+    def test_simple_format_does_not_duplicate_full_pattern(self):
+        """When full pattern 「来源1」（file）matches, simple pattern should not add a duplicate."""
+        answer = "根据「来源1」（糖尿病指南#5）的标准。"
+        contexts = [_make_ctx(idx="1", source_file="糖尿病指南.md", page_number=5)]
+
+        result = self.verifier.extract_and_verify(answer, contexts)
+
+        # Should only be 1 citation for source 1, not 2
+        source1 = [c for c in result if c.source_id == "1"]
+        assert len(source1) == 1
+        assert source1[0].verified is True
+
+
 class TestExtractAndVerifyMixedFormats:
     """Tests for mixed citation formats in the same answer."""
 

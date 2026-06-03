@@ -11,6 +11,10 @@ class CitationVerifier:
     CITATION_PATTERN_OLD = re.compile(r"\[来源(\d+)\]\(([^)]+)\)")
     # Pattern: 「来源X」（文件名#页码）- new format (Chinese quotes)
     CITATION_PATTERN_NEW = re.compile(r"「来源(\d+)」（([^）]+)）")
+    # Pattern: 「来源X」 - simple format without file/parentheses.
+    # This matches the format the prompt actually instructs the LLM to use:
+    # "使用「来源X」格式" (prompt.py SYSTEM_PROMPT).
+    CITATION_PATTERN_SIMPLE = re.compile(r"「来源(\d+)」")
 
     def extract_and_verify(
         self,
@@ -36,14 +40,27 @@ class CitationVerifier:
         citations: list[Citation] = []
         matched_indices: set[int] = set()
 
-        # Find all citation patterns in the answer (both old and new formats)
-        for pattern in [self.CITATION_PATTERN_OLD, self.CITATION_PATTERN_NEW]:
+        # Find all citation patterns in the answer.
+        # Order matters: CITATION_PATTERN_NEW must come before CITATION_PATTERN_SIMPLE
+        # so that "「来源1」（file#5）" is caught by the specific pattern first.
+        for pattern in [self.CITATION_PATTERN_OLD, self.CITATION_PATTERN_NEW, self.CITATION_PATTERN_SIMPLE]:
             for match in pattern.finditer(answer):
                 source_index = int(match.group(1))
-                source_desc = match.group(2)  # e.g., "文件名称#页码"
 
-                # Parse source description
-                file_name, page_number = self._parse_source_desc(source_desc)
+                # Parse source description — the simple pattern has no group(2)
+                try:
+                    source_desc = match.group(2)  # e.g., "文件名称#页码"
+                    file_name, page_number = self._parse_source_desc(source_desc)
+                except IndexError:
+                    # Simple pattern 「来源X」 has no parenthesized file info
+                    source_desc = ""
+                    file_name = None
+                    page_number = None
+
+                # For the simple pattern, skip if this source was already matched
+                # by a more specific pattern (e.g., 「来源1」（file）was caught by CITATION_PATTERN_NEW)
+                if pattern is self.CITATION_PATTERN_SIMPLE and source_index in matched_indices:
+                    continue
 
                 if source_index in context_by_index:
                     ctx = context_by_index[source_index]

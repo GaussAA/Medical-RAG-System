@@ -81,6 +81,17 @@ class SessionManager:
     def get_session(self, session_id: str) -> ConversationSession | None:
         return self.sessions.get(session_id)
 
+    async def get_or_load_session(self, session_id: str) -> ConversationSession | None:
+        """Get session, lazily loading messages from DB if needed.
+
+        Unlike get_session(), this ensures messages are loaded
+        for returning sessions after server restart.
+        """
+        session = self.sessions.get(session_id)
+        if session and not session.messages:
+            await self._load_messages_if_needed(session_id)
+        return self.sessions.get(session_id)  # re-fetch after lazy load
+
     async def add_message(
         self,
         session_id: str,

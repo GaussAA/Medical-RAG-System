@@ -55,6 +55,29 @@ class LLMGenerator:
             self._ensure_client()
         return LLMGenerator._client  # type: ignore[return-value]
 
+    @staticmethod
+    def _build_messages_with_history(
+        system_prompt: str,
+        user_prompt: str,
+        conversation_history: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, str]]:
+        """Build chat completion messages with conversation history.
+
+        Injects history as proper user/assistant message pairs between
+        the system prompt and the current user query, so the LLM sees
+        the full conversation flow naturally.
+        """
+        messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+
+        if conversation_history:
+            for msg in conversation_history:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                messages.append({"role": role, "content": content})
+
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
+
     async def generate(
         self,
         query: str,
@@ -62,12 +85,15 @@ class LLMGenerator:
         include_citations: bool = True,
         conversation_history: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        system_prompt, user_prompt = PromptBuilder.build(query, contexts, conversation_history)
+        system_prompt, user_prompt = PromptBuilder.build(query, contexts)
 
-        response = await self._call_with_retry(
+        messages = self._build_messages_with_history(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
+            conversation_history=conversation_history,
         )
+
+        response = await self._call_with_retry(messages=messages)  # type: ignore[arg-type]
 
         answer = response.choices[0].message.content or ""
 
@@ -92,14 +118,17 @@ class LLMGenerator:
         contexts: list[RetrievedNode],
         conversation_history: list[dict[str, Any]] | None = None,
     ):
-        system_prompt, user_prompt = PromptBuilder.build(query, contexts, conversation_history)
+        system_prompt, user_prompt = PromptBuilder.build(query, contexts)
+
+        messages = self._build_messages_with_history(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            conversation_history=conversation_history,
+        )
 
         stream = await self.client.chat.completions.create(
             model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=messages,  # type: ignore[arg-type]
             temperature=self.temperature,
             max_tokens=self.max_tokens,
             stream=True,
@@ -116,14 +145,11 @@ class LLMGenerator:
         retry=retry_if_exception_type((TimeoutError, ConnectionError)),
         reraise=True,
     )
-    async def _call_with_retry(self, system_prompt: str, user_prompt: str):
+    async def _call_with_retry(self, messages: list[dict[str, str]]):
         """Call LLM API with exponential backoff retry."""
         return await self.client.chat.completions.create(
             model=self.model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=messages,  # type: ignore[arg-type]
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )

@@ -210,7 +210,7 @@ async def _process_single_benchmark_item(
     session_manager,
 ) -> RAGEvaluationResult | None:
     """Process a single benchmark item with timeout."""
-    query = item.get("query", "")
+    query = item.get("query", "") or item.get("query_text", "")
     if not query:
         return None
 
@@ -222,7 +222,7 @@ async def _process_single_benchmark_item(
         ground_truth = EvalGroundTruth(
             query_id=item.get("query_id", query[:50]),
             relevant_doc_ids=ground_truth_ids,
-            reference_answer=item.get("expected_answer"),
+            reference_answer=item.get("expected_answer") or item.get("reference_answer"),
         )
 
         # Get RAG response with timeout

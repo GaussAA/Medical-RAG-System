@@ -156,7 +156,7 @@ class RAGEngine:
             # Build conversation context if session_manager provided
             conversation_history: list[dict[str, Any]] | None = None
             if session_manager and request.session_id:
-                session = session_manager.get_session(request.session_id)
+                session = await session_manager.get_or_load_session(request.session_id)
                 conversation_history = self._build_conversation_history(session)
 
             try:
@@ -312,7 +312,7 @@ class RAGEngine:
             # Build conversation context
             conversation_history: list[dict[str, Any]] | None = None
             if session_manager and request.session_id:
-                session = session_manager.get_session(request.session_id)
+                session = await session_manager.get_or_load_session(request.session_id)
                 conversation_history = self._build_conversation_history(session)
 
             # Pre-stream: yield placeholder metadata

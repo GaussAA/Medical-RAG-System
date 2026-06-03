@@ -17,29 +17,17 @@ class TestBuildSystemPrompt:
 
 
 class TestBuildUserPrompt:
-    def test_formats_with_history_none(self):
+    def test_formats_with_question_and_contexts(self):
         result = build_user_prompt(
             question="什么是糖尿病？",
             contexts="参考信息内容",
-            history=None,
         )
         assert "什么是糖尿病？" in result
         assert "参考信息内容" in result
-        assert "（无历史记录）" in result
-        assert "## 对话历史" in result
         assert "## 参考信息" in result
         assert "## 用户问题" in result
-
-    def test_formats_with_history_string(self):
-        result = build_user_prompt(
-            question="治疗方法有哪些？",
-            contexts="上下文A",
-            history="**用户**: 什么是高血压？\n**助手**: 高血压是指...",
-        )
-        assert "治疗方法有哪些？" in result
-        assert "上下文A" in result
-        assert "**用户**: 什么是高血压？" in result
-        assert "（无历史记录）" not in result
+        # History is now injected by LLMGenerator, not in user prompt
+        assert "## 对话历史" not in result
 
 
 class TestFormatContexts:
@@ -282,13 +270,11 @@ class TestBuildUserPromptIntegration:
         result = build_user_prompt(
             question="糖尿病的诊断标准是什么？",
             contexts=formatted_ctx,
-            history="**用户**: 糖尿病有哪些类型？\n**助手**: 主要有1型和2型。",
         )
         assert "糖尿病的诊断标准是什么？" in result
         assert "糖尿病诊疗指南2023.pdf" in result
-        assert "糖尿病有哪些类型？" in result
-        assert "主要有1型和2型" in result
-        assert "## 对话历史" in result
         assert "## 参考信息" in result
         assert "## 用户问题" in result
         assert "## 回答要求" in result
+        # History is now injected by LLMGenerator as separate messages
+        assert "## 对话历史" not in result
