@@ -52,57 +52,14 @@ class RAGEngine:
         )
 
     async def process_document(self, nodes: list[RetrievedNode]) -> bool:
-        """
-        处理文档向量化，将 embedding 模型加载到 GPU 进行编码。
-
-        流程:
-        1. 检测 reranker 是否在 GPU，如果是则迁移到 CPU
-        2. 加载 embedding 到 GPU
-        3. 执行向量化
-        4. 迁移 embedding 到 CPU（保留模型对象，warm 状态）
-
-        Args:
-            nodes: 要处理的文档节点列表
-
-        Returns:
-            bool: 是否成功处理
-        """
-        from app.core.gpu_memory_manager import GPUMemoryManager
-
-        GPUMemoryManager.get_instance()
-        vector_retriever = self.hybrid_retriever.vector_retriever
-
+        """处理文档向量化。Embedding 模型常驻 GPU（FP16），直接编码。"""
         try:
-            # Step 1: 如果 reranker 在 GPU，先迁移到 CPU
-            if self.reranker.is_on_gpu():
-                logger.info("Moving reranker to CPU to free GPU memory")
-                self.reranker.move_to_cpu()
-
-            # Step 2: 加载 embedding 到 GPU
-            if not vector_retriever.load_embedding_to_gpu():
-                logger.error("Failed to load embedding to GPU")
-                # 回退: 保持在 CPU 继续处理
-                return False
-
-            # Step 3: 执行向量化（使用 GPU 上的 embedding 模型）
-            # 向量化在 VectorRetriever.add() 中自动使用 embedding_model
             await self.hybrid_retriever.add_documents(nodes)
-
-            # Step 4: 迁移 embedding 到 CPU（保留模型对象，warm 状态）
-            vector_retriever.move_embedding_to_cpu()
-            logger.info("Document processing done, embedding stays warm in CPU")
-
             logger.info(f"Document processing completed: {len(nodes)} chunks vectorized")
             return True
-
         except Exception as e:
             logger.error(f"Document processing failed: {e}")
-            # 出错时保持懒加载，不主动加载 reranker
             return False
-        finally:
-            # Ensure embedding model is moved back to CPU even on exception
-            if vector_retriever.is_on_gpu():
-                vector_retriever.move_embedding_to_cpu()
 
     def _build_conversation_history(self, session) -> list[dict[str, Any]] | None:
         """Build conversation history list from session messages."""
@@ -134,8 +91,16 @@ class RAGEngine:
 
             sanitized_query = safety_result.sanitized_text
 
+            # Build conversation context if session_manager provided
+            conversation_history: list[dict[str, Any]] | None = None
+            if session_manager and request.session_id:
+                session = await session_manager.get_or_load_session(request.session_id)
+                conversation_history = self._build_conversation_history(session)
+
             try:
-                reranked_nodes = await self._retrieve_and_rerank(sanitized_query, request.filters)
+                reranked_nodes = await self._retrieve_and_rerank(
+                    sanitized_query, request.filters, conversation_history
+                )
             except Exception as e:
                 logger.error(f"Retrieval/rerank error: {e}")
                 ERROR_COUNT.labels(error_type="retrieval").inc()
@@ -152,12 +117,6 @@ class RAGEngine:
                     "no_results",
                     time.time() - start_time,
                 )
-
-            # Build conversation context if session_manager provided
-            conversation_history: list[dict[str, Any]] | None = None
-            if session_manager and request.session_id:
-                session = await session_manager.get_or_load_session(request.session_id)
-                conversation_history = self._build_conversation_history(session)
 
             try:
                 llm_result = await self._generate_answer(sanitized_query, reranked_nodes, conversation_history)
@@ -280,10 +239,18 @@ class RAGEngine:
 
             sanitized_query = safety_result.sanitized_text
 
-            # Stage 2: Retrieval & Rerank
+            # Build conversation context (BEFORE retrieval, so retrieval can use history)
+            conversation_history: list[dict[str, Any]] | None = None
+            if session_manager and request.session_id:
+                session = await session_manager.get_or_load_session(request.session_id)
+                conversation_history = self._build_conversation_history(session)
+
+            # Stage 2: Retrieval & Rerank (with expanded query from history)
             t0 = time.time()
             try:
-                reranked_nodes = await self._retrieve_and_rerank(sanitized_query, request.filters)
+                reranked_nodes = await self._retrieve_and_rerank(
+                    sanitized_query, request.filters, conversation_history
+                )
             except Exception as e:
                 logger.error(f"Retrieval/rerank error: {e}")
                 ERROR_COUNT.labels(error_type="retrieval").inc()
@@ -308,12 +275,6 @@ class RAGEngine:
                     ).model_dump(),
                 }
                 return
-
-            # Build conversation context
-            conversation_history: list[dict[str, Any]] | None = None
-            if session_manager and request.session_id:
-                session = await session_manager.get_or_load_session(request.session_id)
-                conversation_history = self._build_conversation_history(session)
 
             # Pre-stream: yield placeholder metadata
             yield {
@@ -429,28 +390,27 @@ class RAGEngine:
         """Perform safety check on the query."""
         return self.safety_checker.check(request.question)
 
-    async def _retrieve_and_rerank(self, query: str, filters: dict[str, Any] | None = None) -> list[RetrievedNode]:
-        """Retrieve and rerank documents for the query.
+    async def _retrieve_and_rerank(
+        self,
+        query: str,
+        filters: dict[str, Any] | None = None,
+        conversation_history: list[dict[str, Any]] | None = None,
+    ) -> list[RetrievedNode]:
+        """Retrieve and rerank documents. Both models (embedding + reranker)
+        live on GPU permanently in FP16, no swapping needed.
 
-        Implements GPU time-sharing: embedding uses GPU first, then reranker uses GPU.
-        This allows limited GPU memory (4GB) to support both models.
+        When conversation_history is provided, the query is expanded with the last
+        user message to resolve pronouns and maintain conversational context.
         """
-        vector_retriever = self.hybrid_retriever.vector_retriever
+        # Expand query with conversation context for better retrieval
+        if conversation_history:
+            for msg in reversed(conversation_history):
+                if msg["role"] == "user":
+                    query = f"{msg['content']} {query}"
+                    logger.debug(f"[_retrieve_and_rerank] Expanded query with history: {query[:120]}...")
+                    break
 
-        # ========== Phase 1: Embedding on GPU, Reranker on CPU ==========
-        # 1. Ensure reranker is NOT on GPU (free ~1.8GB for embedding)
-        if self.reranker.is_on_gpu():
-            logger.info("[_retrieve_and_rerank] Moving reranker to CPU to free GPU memory for embedding")
-            self.reranker.move_to_cpu()
-
-        # 2. Load embedding to GPU (requires ~1.5GB)
-        embedding_on_gpu = vector_retriever.load_embedding_to_gpu()
-        if not embedding_on_gpu:
-            logger.warning("[_retrieve_and_rerank] Embedding GPU load failed, using CPU (slower)")
-        else:
-            logger.info("[_retrieve_and_rerank] Embedding loaded on GPU")
-
-        # 3. Execute vector+BM25 retrieval
+        # Phase 1: Vector + BM25 retrieval (embedding on GPU)
         t0 = time.time()
         retrieved_nodes = await self.hybrid_retriever.search(
             query=query,
@@ -460,30 +420,15 @@ class RAGEngine:
         retrieval_elapsed = time.time() - t0
         logger.info(
             f"  [_retrieve_and_rerank] vector+bm25 search: {retrieval_elapsed:.3f}s, "
-            f"got {len(retrieved_nodes)} nodes (embedding_on_gpu={embedding_on_gpu})"
+            f"got {len(retrieved_nodes)} nodes"
         )
 
         if not retrieved_nodes:
-            # Even if no results, still need to release GPU memory
-            if vector_retriever.is_on_gpu():
-                vector_retriever.move_embedding_to_cpu()
             return []
-
-        # 4. Release embedding from GPU (free ~1.5GB for reranker)
-        # Keep embedding model in CPU memory - next load will be faster (warm)
-        if vector_retriever.is_on_gpu():
-            vector_retriever.move_embedding_to_cpu()
-            logger.info("[_retrieve_and_rerank] Embedding released from GPU")
 
         RETRIEVAL_COUNT.labels(retriever_type="hybrid").inc()
 
-        # ========== Phase 2: Reranker on GPU ==========
-        # 5. Load reranker to GPU (requires ~1.8GB)
-        reranker_on_gpu = self.reranker.ensure_on_gpu()
-        if not reranker_on_gpu:
-            logger.warning("[_retrieve_and_rerank] Reranker GPU load failed, using CPU (slower)")
-
-        # 6. Execute reranking
+        # Phase 2: Rerank (reranker on GPU)
         t1 = time.time()
         reranked_nodes = self.reranker.rerank(
             query=query,
@@ -492,17 +437,11 @@ class RAGEngine:
         rerank_elapsed = time.time() - t1
         logger.info(
             f"  [_retrieve_and_rerank] rerank: {rerank_elapsed:.3f}s, "
-            f"got {len(reranked_nodes)} nodes (reranker_on_gpu={reranker_on_gpu})"
+            f"got {len(reranked_nodes)} nodes"
         )
 
         RETRIEVAL_LATENCY.observe(retrieval_elapsed)
         RERANK_LATENCY.observe(rerank_elapsed)
-
-        # 7. Move reranker to CPU to make room for embedding on next query
-        # This keeps embedding warm (loaded in CPU memory) for faster subsequent loads
-        if self.reranker.is_on_gpu():
-            self.reranker.move_to_cpu()
-            logger.info("[_retrieve_and_rerank] Reranker released from GPU, embedding stays warm in CPU")
 
         final_nodes = reranked_nodes[: self.config.retrieval.final_top_k]
         return [

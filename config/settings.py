@@ -76,7 +76,6 @@ class EmbeddingConfig(BaseModel):
     dimension: int = 1024
     normalize: bool = True
     batch_size: int = 32
-    estimated_memory_mb: int = 1536
 
 
 class RerankerConfig(BaseModel):
@@ -84,7 +83,6 @@ class RerankerConfig(BaseModel):
     device: str = "cuda"
     batch_size: int = 8
     max_length: int = 512
-    estimated_memory_mb: int = 1843
 
 
 class LLMConfig(BaseModel):
@@ -101,8 +99,6 @@ class ModelsConfig(BaseModel):
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     reranker: RerankerConfig = Field(default_factory=RerankerConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
-    # Safety margin in MB reserved for GPU allocation overhead
-    gpu_safety_margin_mb: int = 500
 
 
 class ChunkingConfig(BaseModel):

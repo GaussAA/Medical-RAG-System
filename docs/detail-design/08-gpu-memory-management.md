@@ -1,8 +1,14 @@
-# GPU Memory Management
+# GPU Memory Management (DEPRECATED)
 
-## GPUMemoryManager Overview
+> ⚠️ **此文档已废弃**。两模型已切换至 FP16 精度（`model_kwargs={"torch_dtype": torch.float16}`），
+> 合计显存 ~1.7GB，可永久同时常驻 4GB GPU。
+>
+> `GPUMemoryManager` 及所有 GPU 时间分片代码已删除。
+> 本文档保留仅作历史参考。
 
-**File**: [app/core/gpu_memory_manager.py](../../app/core/gpu_memory_manager.py)
+## Architecture Before FP16
+
+**File**: `app/core/gpu_memory_manager.py` (已删除)
 
 **Pattern**: Singleton
 

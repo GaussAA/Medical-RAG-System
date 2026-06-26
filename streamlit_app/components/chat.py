@@ -1,9 +1,58 @@
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import streamlit as st
+
+# CSS for citation anchor links
+CITATION_LINK_CSS = """
+<style>
+.citation-link {
+    color: #1a73e8;
+    text-decoration: none;
+    cursor: pointer;
+    border-bottom: 1px dashed #1a73e8;
+    padding: 0 2px;
+    transition: all 0.15s ease;
+}
+.citation-link:hover {
+    background-color: #1a73e8;
+    color: white;
+    border-bottom-color: #1a73e8;
+}
+.citation-anchor {
+    scroll-margin-top: 80px;
+}
+</style>
+"""
+
+
+def _process_citation_tags(text: str) -> str:
+    """Convert citation tags in answer text to clickable links.
+
+    Uses JavaScript scrollIntoView for reliable navigation in Streamlit,
+    since HTML fragment anchors (#citation-N) can conflict with Streamlit's
+    DOM structure when multiple answers with citations exist on the same page.
+
+    Handles both 「来源N」 and 【来源N】 formats.
+    """
+    # Streamlit wraps each st.markdown in its own container, and expander
+    # content renders inside a <details> element. Native #fragment anchors
+    # can't reliably cross these boundaries to find the target <span>.
+    # Instead we use onclick scrollIntoView which queries the whole document.
+    text = re.sub(
+        r'「来源(\d+)」',
+        r'<a href="#" onclick="document.getElementById(\'citation-\1\').scrollIntoView({behavior:\'smooth\',block:\'center\'});return false;" class="citation-link">「来源\1」</a>',
+        text,
+    )
+    text = re.sub(
+        r'【来源(\d+)】',
+        r'<a href="#" onclick="document.getElementById(\'citation-\1\').scrollIntoView({behavior:\'smooth\',block:\'center\'});return false;" class="citation-link">【来源\1】</a>',
+        text,
+    )
+    return text
 
 
 def render_message(role: str, content: str):
@@ -13,20 +62,30 @@ def render_message(role: str, content: str):
         st.chat_message("assistant").write(content)
 
 
-def render_citations(citations: list[dict]):
+def render_citations(citations: list[dict], show_anchors: bool = True):
     if not citations:
         return
 
+    st.markdown(CITATION_LINK_CSS, unsafe_allow_html=True)
+
+    total = len(citations)
     with st.expander("📚 引用来源", expanded=bool(citations)):
         for i, citation in enumerate(citations, 1):
+            source_id = citation.get("source_id", i)
+            # Hidden anchor target for citation link scrolling
+            if show_anchors:
+                st.markdown(
+                    f'<span id="citation-{source_id}" class="citation-anchor"></span>',
+                    unsafe_allow_html=True,
+                )
             st.markdown(f"**[{i}] {citation.get('file_name', '未知来源')}**")
 
             if citation.get("page_number"):
                 st.write(f"页码: {citation['page_number']}")
 
-            # Relevance score progress bar
-            score = citation.get("relevance_score", 0.0)
-            st.progress(float(score), text=f"相关度: {score:.2f}")
+            # Show ranking position instead of ambiguous normalized score
+            rank_progress = 1.0 - (i - 1) / total if total > 1 else 1.0
+            st.progress(rank_progress, text=f"来源排名: #{i}/{total}")
 
             # Show verification message if present
             if verification_msg := citation.get("verification_message"):
@@ -96,7 +155,8 @@ def render_answer(
 
     render_confidence_badge(confidence)
 
-    st.markdown(answer)
+    # Render answer with clickable citation links
+    st.markdown(_process_citation_tags(answer), unsafe_allow_html=True)
 
     render_warnings(warnings)
 
@@ -130,7 +190,7 @@ def finalize_streaming_answer(
     with answer_placeholder.container():
         st.markdown("### 回答")
         render_confidence_badge(confidence)
-        st.markdown(answer)
+        st.markdown(_process_citation_tags(answer), unsafe_allow_html=True)
         render_warnings(warnings)
 
         col1, col2 = st.columns(2)

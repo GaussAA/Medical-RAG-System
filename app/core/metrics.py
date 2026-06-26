@@ -1,3 +1,4 @@
+import torch
 from loguru import logger
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -111,25 +112,23 @@ def get_content_type() -> str:
 
 
 def _update_gpu_metrics() -> None:
-    """Update GPU memory metrics from GPUMemoryManager."""
+    """Update GPU memory metrics from torch directly. Both models live on GPU
+    permanently (FP16: embedding + reranker)."""
     try:
-        from app.core.gpu_memory_manager import GPUMemoryManager
-
-        manager = GPUMemoryManager.get_instance()
-        info = manager.get_memory_info()
-        models = manager.get_loaded_models()
-
-        if info["available"]:
-            GPU_MEMORY_TOTAL.set(info["total_mb"])
-            GPU_MEMORY_USED.set(info["used_mb"])
-            GPU_MEMORY_FREE.set(info["free_mb"])
-            GPU_MEMORY_RESERVED.set(info.get("reserved_mb", 0))
+        if torch.cuda.is_available():
+            total = torch.cuda.get_device_properties(0).total_memory / (1024**2)
+            allocated = torch.cuda.memory_allocated(0) / (1024**2)
+            reserved = torch.cuda.memory_reserved(0) / (1024**2)
+            GPU_MEMORY_TOTAL.set(total)
+            GPU_MEMORY_USED.set(allocated)
+            GPU_MEMORY_FREE.set(total - reserved)
+            GPU_MEMORY_RESERVED.set(reserved)
         else:
             GPU_MEMORY_TOTAL.set(0)
             GPU_MEMORY_USED.set(0)
             GPU_MEMORY_FREE.set(0)
             GPU_MEMORY_RESERVED.set(0)
 
-        GPU_MODELS_LOADED.set(len(models))
+        GPU_MODELS_LOADED.set(2)  # 两个模型常驻 GPU
     except Exception as e:
         logger.debug(f"GPU metrics unavailable: {e}")

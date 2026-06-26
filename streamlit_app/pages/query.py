@@ -9,6 +9,7 @@ import requests
 import streamlit as st
 
 from streamlit_app.components.chat import (
+    _process_citation_tags,
     render_citations,
     render_confidence_badge,
     render_warnings,
@@ -20,7 +21,9 @@ st.title("💬 智能问答")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "session_id" not in st.session_state:
-    st.session_state.session_id = None
+    # 优先从 URL 参数恢复 session_id（页面刷新后依然保留）
+    url_session_id = st.query_params.get("session_id")
+    st.session_state.session_id = url_session_id if url_session_id else None
 if "message_metadata" not in st.session_state:
     st.session_state.message_metadata = {}
 
@@ -86,6 +89,8 @@ def answer_stream(question, session_id, result_container):
                 if event_type == "metadata":
                     if data.get("session_id"):
                         st.session_state.session_id = data["session_id"]
+                        # Persist session_id in URL so it survives page refresh
+                        st.query_params["session_id"] = data["session_id"]
                         result_container["session_id"] = data["session_id"]
 
                 elif event_type == "chunk":
@@ -116,7 +121,14 @@ def render_streaming_answer(full_answer):
 
 # 显示已加载的消息
 for idx, message in enumerate(st.session_state.get("messages", [])):
-    st.chat_message(message["role"]).write(message["content"])
+    if message["role"] == "assistant":
+        # Render answer with clickable citation links
+        st.chat_message("assistant").markdown(
+            _process_citation_tags(message["content"]),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.chat_message("user").write(message["content"])
     # 如果是 assistant 消息，渲染附加信息
     if message["role"] == "assistant" and st.session_state.get("message_metadata"):
         # 找到对应的 metadata
@@ -132,7 +144,7 @@ for idx, message in enumerate(st.session_state.get("messages", [])):
             if warnings:
                 render_warnings(warnings)
             if citations:
-                render_citations(citations)
+                render_citations(citations, show_anchors=False)
 
 question = st.chat_input("输入您的医疗问题...")
 
@@ -146,7 +158,13 @@ if question:
     with st.spinner("正在检索知识库..."):
         try:
             result_container: dict[str, Any] = {}
-            st.write_stream(answer_stream(question, session_id_to_use, result_container))
+
+            # Use placeholder to show streaming progress, then replace with linked version
+            answer_placeholder = st.empty()
+            full_answer = ""
+            for chunk in answer_stream(question, session_id_to_use, result_container):
+                full_answer += chunk
+                answer_placeholder.markdown(full_answer + "▌")
 
             # 流结束后检查 result_container
             if result_container.get("answer"):
@@ -156,14 +174,19 @@ if question:
                 warnings = result_container.get("warnings", [])
                 processing_time = result_container.get("processing_time", 0.0)
 
-                # 流结束后只渲染元数据（置信度、警告、引用），answer 已由 st.write_stream 显示
+                # Replace plain streaming answer with linkified HTML version
+                answer_placeholder.markdown(
+                    _process_citation_tags(full_answer),
+                    unsafe_allow_html=True,
+                )
+
+                # Render supplemental metadata below answer
                 from streamlit_app.components.chat import (
                     render_citations,
                     render_confidence_badge,
                     render_warnings,
                 )
 
-                st.markdown("### 回答")
                 render_confidence_badge(confidence)
                 render_warnings(warnings)
 
@@ -175,7 +198,7 @@ if question:
                         st.info(f"📚 引用来源: {len(citations)}条")
 
                 if citations:
-                    render_citations(citations)
+                    render_citations(citations)  # show_anchors=True (default)
 
                 st.session_state.messages.append({"role": "assistant", "content": full_answer})
             else:
@@ -210,6 +233,7 @@ if question:
 
                     if result.get("session_id"):
                         st.session_state.session_id = result["session_id"]
+                        st.query_params["session_id"] = result["session_id"]
 
                     from streamlit_app.components.chat import render_answer
 
@@ -240,6 +264,9 @@ with st.sidebar:
     if st.button("🆕 新建对话"):
         st.session_state.messages = []
         st.session_state.session_id = None
+        # Clear URL param to start fresh
+        if "session_id" in st.query_params:
+            del st.query_params["session_id"]
         st.rerun()
 
     st.divider()

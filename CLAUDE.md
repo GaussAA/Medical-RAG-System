@@ -15,30 +15,36 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 理解这些决策对于正确地在此项目中工作至关重要：
 
 ### 1. Markdown-only 处理
+
 - PDF/DOCX 支持已移除（解析可靠性问题）
 - 所有文档格式：`.md`、`.markdown`
 - [03-document-processing.md](docs/detail-design/03-document-processing.md) § Markdown-Only Processing
 
 ### 2. 层级感知分块 (Hierarchical Chunking)
+
 - 按 H1-H6 标题边界切分文档
 - 表格、列表作为独立语义单元保留
 - 每个 Chunk 携带 `heading_tree`（完整标题路径）和 `content_type`（text/table/list）
 - [03-document-processing.md](docs/detail-design/03-document-processing.md) § HierarchicalChunker
 
 ### 3. 查询类型 Boosting
+
 - 检测查询中的内容类型意图，表查询优先返回表格，药物查询优先返回列表
 - [04-retrieval-system.md](docs/detail-design/04-retrieval-system.md) § Query-Type Detection
 
 ### 4. 三存储同步策略
+
 - 删除顺序：PostgreSQL（先）→ Qdrant → BM25（后）
 - PostgreSQL 失败则中止，索引失败则记录不一致并用 `/cleanup-orphans` 修复
 - [01-architecture-overview.md](docs/detail-design/01-architecture-overview.md) § Synchronization Rules
 
 ### 5. 向量/BM25 权重
+
 - RRF 公式：`vector_weight=0.6`, `bm25_weight=0.4`, `rrf_k=60`
 - [04-retrieval-system.md](docs/detail-design/04-retrieval-system.md) § Reciprocal Rank Fusion
 
 ### 6. 多轮对话上下文注入
+
 - `QueryRequest` 可带 `session_id`，首次查询无 `session_id` 时自动创建
 - 历史通过 `conversation_history` 参数注入 LLM prompt
 - 消息持久化位置：`RAGEngine.query()` 内部
@@ -52,13 +58,15 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 - MD5 去重检测，重复文件返回 `duplicate` 状态
 - [03-document-processing.md](docs/detail-design/03-document-processing.md) § Batch Upload
 
-### 8. GPU 时间分片策略
-- Embedding (~1.5GB) 和 Reranker (~1.8GB) 无法同时共存于 4GB GPU
-- 流程：Embedding 加载到 GPU → 执行检索 → 释放到 CPU (warm) → Reranker 加载到 GPU → 执行重排 → Reranker 释放到 CPU这个是什么情况？康客的每次第一次执行办神命令是堵会用到这个。
-- Embedding 保持在 CPU 内存中，下次查询时加载更快
-- 详细设计：[08-gpu-memory-management.md](docs/detail-design/08-gpu-memory-management.md)
+### 8. FP16 量化与 GPU 常驻策略
+- Embedding (`BAAI/bge-m3`) 和 Reranker (`BAAI/bge-reranker-v2-m3`) 均以 FP16 精度加载
+- 两模型合计显存 ~1.7GB，可永久同时常驻 4GB GPU
+- 不再需要 GPU 时间分片和 `GPUMemoryManager`，模型在启动时懒加载到 CUDA 后即常驻
+- 配置项：`models.{embedding,reranker}.device: "cuda"` + `model_kwargs={"torch_dtype": torch.float16}`
+- 原详细设计文档 `08-gpu-memory-management.md` 已废弃（内容保存仅作历史参考）
 
 ### 9. RAG 评估系统
+
 - 评估维度：检索（Precision@K/Recall@K/NDCG@K/MRR）、生成（Faithfulness/Answer Relevancy）、医疗安全（实体准确率/警告覆盖率）
 - 评估器入口：`RAGEvaluator` 类，支持单次评估和批量基准测试
 - 评测数据集格式：JSONL，每行包含 `query`、`expected_answer`、`relevant_doc_ids`、`difficulty`、`safety_sensitive` 字段
@@ -78,7 +86,7 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 | [05-session-management.md](docs/detail-design/05-session-management.md)       | SessionManager、消息驱逐、上下文窗口    | [完整] |
 | [06-data-models.md](docs/detail-design/06-data-models.md)                     | PostgreSQL 表结构、三存储映射           | [完整] |
 | [07-configuration.md](docs/detail-design/07-configuration.md)                 | YAML 配置和 Pydantic settings           | [完整] |
-| [08-gpu-memory-management.md](docs/detail-design/08-gpu-memory-management.md) | Embedding/Reranker GPU 懒加载策略       | [完整] |
+| [08-gpu-memory-management.md](docs/detail-design/08-gpu-memory-management.md) | [废弃] FP16 常驻 GPU 后不再需要时间分片         | [废弃] |
 | [09-query-type-detection.md](docs/detail-design/09-query-type-detection.md)   | 查询类型检测、内容类型增强机制          | [完整] |
 | [10-citation-verification.md](docs/detail-design/10-citation-verification.md) | 引用验证、幻觉检测机制                  | [完整] |
 | [11-evaluation-system.md](docs/detail-design/11-evaluation-system.md)         | RAG 评估系统、基准测试、指标体系        | [完整] |
@@ -155,16 +163,21 @@ Conversation ───1:N──→ Message
 ## 补充说明
 
 ### msg_count 字段
+
 `ConversationSession` 有一个 `msg_count` 字段，用于跟踪会话消息数量。这与 `len(messages)` 不同，因为消息可能在达到限制时被驱逐。
 
 ### 引用验证与幻觉检测
+
 `RAGEngine._generate_warnings()` 直接生成风险警告，包含幻觉检测：
+
 - 检测未验证引用（`verified=False`）的比例
 - 超过阈值（默认 0.5）时触发 `hallucination` 警告
 - 配置项：`generation.citation_verification.hallucination_threshold`
 
 ### 警告生成方式
+
 `app/core/risk_warnings.py` 中的 `RiskWarningGenerator` 类**未被 RAGEngine 使用**。RAGEngine 直接在 `_generate_warnings()` 方法中生成警告，包含：
+
 - `general` - 始终添加
 - `medication` - 检测到药物关键词
 - `diagnosis` - 检测到诊断关键词
@@ -181,8 +194,8 @@ Conversation ───1:N──→ Message
 
 ## 反模式警示
 
-| 禁止                                              | 说明                            |
-| ------------------------------------------------- | ------------------------------- |
+| 禁止                                               | 说明                            |
+| -------------------------------------------------- | ------------------------------- |
 | ❌ 在 `RAGEngine.query()` 外部调用 `add_message()` | 消息持久化应在 RAGEngine 内部   |
 | ❌ 修改 `db_confirmed` 标志                        | 这是内部实现细节                |
 | ❌ 打乱三存储删除顺序                              | 必须 PostgreSQL → Qdrant → BM25 |
@@ -199,7 +212,9 @@ Conversation ───1:N──→ Message
 | `ConversationSession has no field` | Pydantic 字段需用 `Field(default=...)` 定义 |
 
 内存需求：Embedding ~1.5GB + Reranker ~1.8GB，建议可用内存 > 4GB。
+
 ### 流式查询
+
 - `POST /api/v1/query/stream` 返回 SSE 流式响应
 - 事件类型：`metadata` → `chunk` → `done`/`error`
 - 分阶段计时日志便于定位瓶颈

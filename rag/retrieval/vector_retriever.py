@@ -1,5 +1,4 @@
 import asyncio
-import gc
 from typing import Any
 
 import torch
@@ -28,8 +27,6 @@ class VectorRetriever(BaseRetriever):
         self.similarity_threshold = self.retrieval_config.similarity_threshold
 
         self._embedding_model = None
-        self._embedding_on_gpu = False
-        self._embedding_memory_mb = settings.models.embedding.estimated_memory_mb
 
     @classmethod
     def _get_client(cls) -> Any:
@@ -60,88 +57,35 @@ class VectorRetriever(BaseRetriever):
 
     @property
     def embedding_model(self):
-        """Get embedding model, default CPU."""
+        """Get embedding model, lazily loaded to configured device."""
         if self._embedding_model is None:
             from sentence_transformers import SentenceTransformer
 
             settings = get_settings()
             embedding_model_name = settings.models.embedding.name
             device = settings.models.embedding.device
-            self._embedding_model = SentenceTransformer(embedding_model_name, device=device)
-            self._embedding_on_gpu = device == "cuda"
+            self._embedding_model = SentenceTransformer(
+                embedding_model_name,
+                device=device,
+                model_kwargs={"torch_dtype": torch.float16},
+            )
         return self._embedding_model
+
+    def load_embedding_to_gpu(self) -> bool:
+        """No-op: embedding model is already on GPU (FP16)."""
+        return True
+
+    def move_embedding_to_cpu(self) -> bool:
+        """No-op: embedding model stays on GPU permanently."""
+        return True
+
+    def is_on_gpu(self) -> bool:
+        """Embedding model is always on GPU (FP16)."""
+        return True
 
     def _encode_batch(self, texts: list[str]) -> list[list[float]]:
         """Synchronous batch encoding for use in executor."""
         return self.embedding_model.encode(texts).tolist()
-
-    def load_embedding_to_gpu(self) -> bool:
-        """Load embedding model to GPU."""
-        from app.core.gpu_memory_manager import GPUMemoryManager, get_gpu_memory_status
-
-        if self._embedding_on_gpu:
-            return True
-
-        _ = self.embedding_model
-
-        # Force cleanup before checking GPU memory to get accurate free size
-        gc.collect()
-        torch.cuda.empty_cache()
-
-        settings = get_settings()
-        safety_margin_mb = settings.models.gpu_safety_margin_mb
-        safety_margin_gb = safety_margin_mb / 1024
-
-        status = get_gpu_memory_status()
-        usable_gb = status.free_gb - safety_margin_gb
-        required_gb = self._embedding_memory_mb / 1024
-
-        logger.debug(
-            f"GPU memory check for embedding: required={required_gb:.2f}GB, "
-            f"free={status.free_gb:.2f}GB, usable={usable_gb:.2f}GB"
-        )
-
-        if usable_gb < required_gb:
-            logger.warning(
-                f"GPU memory insufficient for embedding: required={required_gb:.2f}GB, usable={usable_gb:.2f}GB"
-            )
-            return False
-
-        assert self._embedding_model is not None
-        self._embedding_model.to("cuda")
-        self._embedding_on_gpu = True
-
-        gpu_manager = GPUMemoryManager.get_instance()
-        gpu_manager.register_model("embedding", self._embedding_memory_mb)
-
-        logger.info(f"Embedding model loaded to GPU ({self._embedding_memory_mb}MB)")
-        return True
-
-    def move_embedding_to_cpu(self) -> bool:
-        """Move embedding model from GPU to CPU."""
-        from app.core.gpu_memory_manager import GPUMemoryManager
-
-        gpu_manager = GPUMemoryManager.get_instance()
-
-        if not self._embedding_on_gpu:
-            return True
-
-        assert self._embedding_model is not None
-        self._embedding_model.to("cpu")
-        self._embedding_on_gpu = False
-
-        gpu_manager.unregister_model("embedding")
-
-        # Force GC + cache flush to minimize GPU memory fragmentation
-        gc.collect()
-        torch.cuda.empty_cache()
-
-        logger.info("Embedding model moved to CPU")
-        return True
-
-    def is_on_gpu(self) -> bool:
-        """Check if embedding model is on GPU."""
-        return self._embedding_on_gpu
 
     async def retrieve(self, query: str, top_k: int = 5, filters: dict[str, Any] | None = None) -> list[RetrievedNode]:
         try:

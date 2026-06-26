@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import torch
 
 from app.models.schemas import RetrievedNode
 from rag.reranker.cross_encoder import Reranker
@@ -16,7 +17,6 @@ class TestRerankerInit:
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
             mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
 
             reranker = Reranker()
 
@@ -24,7 +24,6 @@ class TestRerankerInit:
             assert reranker.device == "cpu"
             assert reranker.batch_size == 16
             assert reranker.max_length == 512
-            assert reranker.estimated_memory_mb == 1800
 
     def test_init_accepts_custom_args(self):
         """Reranker should accept custom model_name, device, batch_size, max_length."""
@@ -44,21 +43,18 @@ class TestRerankerInit:
         """Reranker should not load model on init (lazy loading)."""
         reranker = Reranker(model_name="test-model")
         assert reranker.model is None
-        assert reranker._model_on_gpu is False
-        assert reranker._model_on_cpu is False
 
 
 class TestRerankerEnsureModelLoaded:
     """Test Reranker _ensure_model_loaded."""
 
-    def test_ensure_model_loaded_loads_model_to_cpu(self):
-        """First access should load model to CPU."""
+    def test_ensure_model_loaded_loads_model(self):
+        """First access should load model."""
         with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
             mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
 
             reranker = Reranker()
 
@@ -67,8 +63,6 @@ class TestRerankerEnsureModelLoaded:
                 reranker._ensure_model_loaded()
 
             assert reranker.model is not None
-            assert reranker._model_on_cpu is True
-            assert reranker._model_on_gpu is False
 
     def test_ensure_model_loaded_called_once(self):
         """Model should only be loaded once."""
@@ -77,7 +71,6 @@ class TestRerankerEnsureModelLoaded:
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
             mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
 
             reranker = Reranker()
             reranker.model = MagicMock()  # Pre-set model to avoid actual loading
@@ -86,179 +79,25 @@ class TestRerankerEnsureModelLoaded:
 
             assert reranker.model is not None
 
-
-class TestRerankerEnsureOnGpu:
-    """Test Reranker ensure_on_gpu."""
-
-    def test_ensure_on_gpu_returns_true_when_already_on_gpu(self):
-        """If model already on GPU, should return True without reloading."""
+    def test_ensure_model_loaded_passes_torch_dtype_fp16(self):
+        """Should pass model_kwargs with torch.float16 for FP16 inference."""
         with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
-            mock_settings.return_value.models.reranker.device = "cpu"
+            mock_settings.return_value.models.reranker.device = "cuda"
             mock_settings.return_value.models.reranker.batch_size = 16
             mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
-            mock_settings.return_value.models.gpu_safety_margin_mb = 1024
 
             reranker = Reranker()
-            reranker._model_on_gpu = True
 
-            result = reranker.ensure_on_gpu()
+            with patch("sentence_transformers.CrossEncoder") as mock_ce:
+                reranker._ensure_model_loaded()
 
-            assert result is True
-
-    def test_ensure_on_gpu_loads_model_if_not_loaded(self):
-        """Should call _ensure_model_loaded if model is None."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
-            mock_settings.return_value.models.reranker.name = "test-model"
-            mock_settings.return_value.models.reranker.device = "cpu"
-            mock_settings.return_value.models.reranker.batch_size = 16
-            mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
-            mock_settings.return_value.models.gpu_safety_margin_mb = 1024
-
-            reranker = Reranker()
-            reranker._ensure_model_loaded = MagicMock()
-            reranker.model = MagicMock()
-
-            reranker.ensure_on_gpu()
-
-            reranker._ensure_model_loaded.assert_called_once()
-
-    def test_ensure_on_gpu_insufficient_memory_returns_false(self):
-        """Should return False when GPU memory is insufficient."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
-            mock_settings.return_value.models.reranker.name = "test-model"
-            mock_settings.return_value.models.reranker.device = "cpu"
-            mock_settings.return_value.models.reranker.batch_size = 16
-            mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
-            mock_settings.return_value.models.gpu_safety_margin_mb = 1024
-
-            reranker = Reranker()
-            reranker.model = MagicMock()
-            reranker._ensure_model_loaded = MagicMock()
-
-            mock_gpu_manager = MagicMock()
-            mock_gpu_manager.get_memory_info.return_value = {"free_mb": 1024}
-
-            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
-                mock_gpum.get_instance.return_value = mock_gpu_manager
-
-                result = reranker.ensure_on_gpu()
-
-                assert result is False
-                assert reranker._model_on_gpu is False
-
-    def test_ensure_on_gpu_successful_migration(self):
-        """Should successfully migrate model to GPU."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
-            mock_settings.return_value.models.reranker.name = "test-model"
-            mock_settings.return_value.models.reranker.device = "cpu"
-            mock_settings.return_value.models.reranker.batch_size = 16
-            mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
-            mock_settings.return_value.models.gpu_safety_margin_mb = 1024
-
-            reranker = Reranker()
-            reranker.model = MagicMock()
-            reranker._ensure_model_loaded = MagicMock()
-
-            mock_gpu_manager = MagicMock()
-            mock_gpu_manager.get_memory_info.return_value = {"free_mb": 8192}
-
-            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
-                mock_gpum.get_instance.return_value = mock_gpu_manager
-
-                result = reranker.ensure_on_gpu()
-
-                assert result is True
-                assert reranker._model_on_gpu is True
-                assert reranker._model_on_cpu is False
-                reranker.model.to.assert_called_once_with("cuda")
-                mock_gpu_manager.register_model.assert_called_once_with("reranker", 1800)
-
-
-class TestRerankerMoveToCpu:
-    """Test Reranker move_to_cpu."""
-
-    def test_move_to_cpu_returns_true_when_not_on_gpu(self):
-        """Should return True immediately if model not on GPU."""
-        reranker = Reranker(model_name="test-model")
-        reranker._model_on_gpu = False
-
-        result = reranker.move_to_cpu()
-
-        assert result is True
-
-    def test_move_to_cpu_migrates_model_to_cpu(self):
-        """Should migrate model from GPU to CPU."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
-            mock_settings.return_value.models.reranker.name = "test-model"
-            mock_settings.return_value.models.reranker.device = "cpu"
-            mock_settings.return_value.models.reranker.batch_size = 16
-            mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
-
-            reranker = Reranker()
-            reranker.model = MagicMock()
-            reranker._model_on_gpu = True
-            reranker._ensure_model_loaded = MagicMock()
-
-            mock_gpu_manager = MagicMock()
-
-            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
-                mock_gpum.get_instance.return_value = mock_gpu_manager
-
-                result = reranker.move_to_cpu()
-
-                assert result is True
-                assert reranker._model_on_gpu is False
-                assert reranker._model_on_cpu is True
-                reranker.model.to.assert_called_once_with("cpu")
-                mock_gpu_manager.unregister_model.assert_called_once_with("reranker")
-
-    def test_move_to_cpu_clears_cuda_cache(self):
-        """Should clear CUDA cache after moving to CPU."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
-            mock_settings.return_value.models.reranker.name = "test-model"
-            mock_settings.return_value.models.reranker.device = "cpu"
-            mock_settings.return_value.models.reranker.batch_size = 16
-            mock_settings.return_value.models.reranker.max_length = 512
-            mock_settings.return_value.models.reranker.estimated_memory_mb = 1800
-
-            reranker = Reranker()
-            reranker.model = MagicMock()
-            reranker._model_on_gpu = True
-            reranker._ensure_model_loaded = MagicMock()
-
-            mock_gpu_manager = MagicMock()
-
-            with patch("rag.reranker.cross_encoder.GPUMemoryManager") as mock_gpum:
-                mock_gpum.get_instance.return_value = mock_gpu_manager
-
-                with patch("torch.cuda.empty_cache") as mock_clear:
-                    reranker.move_to_cpu()
-
-                    mock_clear.assert_called_once()
-
-
-class TestRerankerIsOnGpu:
-    """Test Reranker is_on_gpu."""
-
-    def test_is_on_gpu_returns_true_when_on_gpu(self):
-        """Should return True when model is on GPU."""
-        reranker = Reranker(model_name="test-model")
-        reranker._model_on_gpu = True
-
-        assert reranker.is_on_gpu() is True
-
-    def test_is_on_gpu_returns_false_when_not_on_gpu(self):
-        """Should return False when model is not on GPU."""
-        reranker = Reranker(model_name="test-model")
-        reranker._model_on_gpu = False
-
-        assert reranker.is_on_gpu() is False
+                mock_ce.assert_called_once_with(
+                    "test-model",
+                    max_length=512,
+                    device="cuda",
+                    model_kwargs={"torch_dtype": torch.float16},
+                )
 
 
 class TestRerankerRerank:
@@ -278,7 +117,6 @@ class TestRerankerRerank:
         reranker._ensure_model_loaded = MagicMock()
         reranker.model = MagicMock()
         reranker.model.predict = MagicMock(return_value=[0.8])
-        reranker.ensure_on_gpu = MagicMock()
 
         candidates = [
             RetrievedNode(node_id="1", content="content1", score=0.9, metadata={}),
@@ -292,7 +130,6 @@ class TestRerankerRerank:
         """Should return nodes sorted by reranking score."""
         reranker = Reranker(model_name="test-model")
         reranker._ensure_model_loaded = MagicMock()
-        reranker.ensure_on_gpu = MagicMock()
 
         mock_model = MagicMock()
         mock_model.predict.return_value = [0.2, 0.8, 0.5]
@@ -315,7 +152,6 @@ class TestRerankerRerank:
         """Should return empty content when return_documents is False."""
         reranker = Reranker(model_name="test-model")
         reranker._ensure_model_loaded = MagicMock()
-        reranker.ensure_on_gpu = MagicMock()
 
         mock_model = MagicMock()
         mock_model.predict.return_value = [0.8]
@@ -334,7 +170,6 @@ class TestRerankerRerank:
         """Should preserve metadata from original candidates."""
         reranker = Reranker(model_name="test-model")
         reranker._ensure_model_loaded = MagicMock()
-        reranker.ensure_on_gpu = MagicMock()
 
         mock_model = MagicMock()
         mock_model.predict.return_value = [0.8]
