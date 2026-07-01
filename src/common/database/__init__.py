@@ -1,6 +1,7 @@
 """Database engine and ORM models."""
 
 from src.common.database.engine import (
+    _ensure_engine_initialized,
     close_engine,
     get_engine,
     get_session,
@@ -17,6 +18,7 @@ from src.common.database.models import (
 )
 
 __all__ = [
+    "_ensure_engine_initialized",
     "get_engine",
     "get_session_factory",
     "get_session",

@@ -7,9 +7,8 @@ from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.database.engine import get_session_factory
-from src.common.database.models import Chunk as DBChunk
-from src.common.database.models import Document, Heading
+from src.common.database import Chunk as DBChunk
+from src.common.database import Document, Heading, get_session_factory
 
 
 class DocumentStore:

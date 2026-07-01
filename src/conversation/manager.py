@@ -6,12 +6,11 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.cache.manager import CacheManager
-from src.common.database.engine import get_session_factory
-from src.common.database.models import Conversation, Message
+from src.common.cache import CacheManager
+from src.common.database import Conversation, Message, get_session_factory
 from src.common.models import ConversationSession
 from src.common.models import Message as MessageSchema
-from src.query.generation.prompt import format_history_message
+from src.query.generation import format_history_message
 
 SESSION_CACHE_PREFIX = "session"
 SESSION_CACHE_TTL = 3600  # 1 hour

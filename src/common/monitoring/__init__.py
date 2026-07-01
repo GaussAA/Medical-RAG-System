@@ -12,10 +12,10 @@ from src.common.monitoring.metrics import (
     GPU_MODELS_LOADED,
     LLM_TOKENS,
     QUERY_LATENCY,
+    REGISTRY,
     RERANK_LATENCY,
     RETRIEVAL_COUNT,
     RETRIEVAL_LATENCY,
-    REGISTRY,
     get_content_type,
     get_metrics,
 )

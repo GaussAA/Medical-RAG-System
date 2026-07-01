@@ -94,10 +94,88 @@ select = [
     "W",   # pycodestyle 警告
     "UP",  # pyupgrade 现代化语法
     "N",   # pep8-naming 命名规范
+    "TID", # flake8-tidy-imports（禁止绕过 __init__.py 的内部导入）
 ]
 extend-ignore = [
     "N802",  # 允许函数名含大写（Pydantic validators 需大写）
 ]
+
+# ========== 模块边界约束：禁止绕过 __init__.py 导入内部模块 ==========
+# 规则：其他模块必须通过对应的 __init__.py 导入公开 API，
+#       而非直接导入内部实现文件。
+# 例外：__init__.py 自身需要导入内部模块以重导出，已在 per-file-ignores 中豁免。
+[tool.ruff.lint.per-file-ignores]
+"src/*/__init__.py" = ["TID251"]
+"src/common/config/__init__.py" = ["TID251"]
+"src/common/__init__.py" = ["TID251"]
+"src/common/config/settings.py" = ["TID251"]
+"src/common/safety/checker.py" = ["TID251"]
+"src/common/database/engine.py" = ["TID251"]
+"src/common/database/models.py" = ["TID251"]
+"src/common/cache/manager.py" = ["TID251"]
+"src/common/logging/setup.py" = ["TID251"]
+"src/common/monitoring/metrics.py" = ["TID251"]
+"src/common/monitoring/api.py" = ["TID251"]
+"src/common/di/container.py" = ["TID251"]
+"src/common/di/deps.py" = ["TID251"]
+"src/conversation/manager.py" = ["TID251"]
+"src/conversation/consistency.py" = ["TID251"]
+"src/documents/chunker.py" = ["TID251"]
+"src/documents/parser.py" = ["TID251"]
+"src/documents/processor.py" = ["TID251"]
+"src/documents/indexer.py" = ["TID251"]
+"src/documents/service.py" = ["TID251"]
+"src/documents/store.py" = ["TID251"]
+"src/query/engine.py" = ["TID251"]
+"src/query/generation/generator.py" = ["TID251"]
+"src/query/generation/prompt.py" = ["TID251"]
+"src/query/generation/prompt_builder.py" = ["TID251"]
+"src/query/generation/warnings.py" = ["TID251"]
+"src/query/reranker/cross_encoder.py" = ["TID251"]
+"src/query/retrieval/hybrid.py" = ["TID251"]
+"src/query/retrieval/vector.py" = ["TID251"]
+"src/query/retrieval/bm25.py" = ["TID251"]
+"src/query/retrieval/base.py" = ["TID251"]
+"src/query/retrieval/boosting.py" = ["TID251"]
+"src/query/citation/verifier.py" = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# ======== docs common ========
+"src.common.config.settings".msg = "改用 src.common.config 导入"
+"src.common.database.engine".msg = "改用 src.common.database 导入"
+"src.common.database.models".msg = "改用 src.common.database 导入"
+"src.common.cache.manager".msg = "改用 src.common.cache 导入"
+"src.common.logging.setup".msg = "改用 src.common.logging 导入"
+"src.common.monitoring.metrics".msg = "改用 src.common.monitoring 导入"
+"src.common.monitoring.api".msg = "改用 src.common.monitoring 导入"
+"src.common.di.container".msg = "改用 src.common.di 导入"
+"src.common.di.deps".msg = "改用 src.common.di 导入"
+"src.common.safety.checker".msg = "改用 src.common.safety 导入"
+
+# ======== docs documents ========
+"src.documents.chunker".msg = "改用 src.documents 导入"
+"src.documents.parser".msg = "改用 src.documents 导入"
+"src.documents.processor".msg = "改用 src.documents 导入"
+"src.documents.indexer".msg = "改用 src.documents 导入"
+"src.documents.service".msg = "改用 src.documents 导入"
+"src.documents.store".msg = "改用 src.documents 导入"
+
+# ======== docs conversation ========
+"src.conversation.manager".msg = "改用 src.conversation 导入"
+"src.conversation.consistency".msg = "改用 src.conversation 导入"
+
+# ======== docs query ========
+"src.query.citation.verifier".msg = "改用 src.query.citation 导入"
+"src.query.retrieval.hybrid".msg = "改用 src.query.retrieval 导入"
+"src.query.retrieval.vector".msg = "改用 src.query.retrieval 导入"
+"src.query.retrieval.bm25".msg = "改用 src.query.retrieval 导入"
+"src.query.retrieval.base".msg = "改用 src.query.retrieval 导入"
+"src.query.retrieval.boosting".msg = "改用 src.query.retrieval 导入"
+"src.query.generation.generator".msg = "改用 src.query.generation 导入"
+"src.query.generation.prompt".msg = "改用 src.query.generation 导入"
+"src.query.generation.prompt_builder".msg = "改用 src.query.generation 导入"
+"src.query.generation.warnings".msg = "改用 src.query.generation 导入"
+"src.query.reranker.cross_encoder".msg = "改用 src.query.reranker 导入"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

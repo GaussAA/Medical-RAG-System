@@ -8,11 +8,11 @@ from fastapi import APIRouter, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from src.common.di.deps import RAGEngineDep
+from src.common.di import RAGEngineDep
 from src.common.models import QueryRequest
-from src.documents.store import DocumentStore
+from src.documents import DocumentStore
 from src.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
-from src.query.generation.generator import LLMGenerator
+from src.query.generation import LLMGenerator
 
 router = APIRouter(prefix="/api/v1/evaluation", tags=["evaluation"])
 

@@ -12,9 +12,9 @@ from fastapi import Depends, Header, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from src.common.cache.manager import CacheManager
+from src.common.cache import CacheManager
 from src.common.config.settings import Settings
-from src.common.safety.checker import SafetyChecker
+from src.common.safety import SafetyChecker
 from src.conversation.manager import SessionManager
 from src.documents.service import DocumentService
 from src.query.confidence import ConfidenceEvaluator

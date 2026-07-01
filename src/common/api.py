@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from sqlalchemy import text
 
-from src.common.config.settings import get_settings
-from src.common.database.engine import get_session_factory
+from src.common.config import get_settings
+from src.common.database import get_session_factory
 
 router = APIRouter(prefix="/api/v1", tags=["health"])
 

@@ -8,14 +8,14 @@ import torch
 from loguru import logger
 
 from src.common.config.settings import get_settings
-from src.common.logging.setup import request_id_var
+from src.common.logging import request_id_var
 from src.common.models import (
     QueryRequest,
     QueryResponse,
     RetrievedNode,
     RiskWarning,
 )
-from src.common.monitoring.metrics import (
+from src.common.monitoring import (
     ACTIVE_QUERIES,
     ERROR_COUNT,
     GENERATION_LATENCY,
@@ -25,18 +25,15 @@ from src.common.monitoring.metrics import (
     RETRIEVAL_COUNT,
     RETRIEVAL_LATENCY,
 )
-from src.common.safety import SafetyCheckPort
 
 # ponytail: concrete fallbacks for DI; import via interfaces in production
-from src.common.safety.checker import SafetyChecker
+from src.common.safety import SafetyChecker, SafetyCheckPort
 from src.conversation import SessionManagerPort
-from src.query.citation.verifier import CitationVerifier
+from src.query.citation import CitationVerifier
 from src.query.confidence import ConfidenceEvaluator
-from src.query.generation.generator import LLMGenerator
-from src.query.generation.prompt import FALLBACK_RESPONSES
-from src.query.generation.warnings import WarningsGenerator
-from src.query.reranker.cross_encoder import Reranker
-from src.query.retrieval.hybrid import HybridRetriever
+from src.query.generation import FALLBACK_RESPONSES, LLMGenerator, WarningsGenerator
+from src.query.reranker import Reranker
+from src.query.retrieval import HybridRetriever
 
 
 class RAGEngine:

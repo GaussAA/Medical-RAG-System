@@ -18,10 +18,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from src.common import api as health_api
-from src.common.config.settings import get_settings
-from src.common.di.container import create_container
-from src.common.logging.setup import setup_logging
-from src.common.monitoring import api as metrics_api
+from src.common.config import get_settings
+from src.common.di import create_container
+from src.common.logging import setup_logging
+from src.common.monitoring import metrics_router
 from src.conversation import api as conversation_api
 
 # Route imports (from new vertical slices)
@@ -57,9 +57,12 @@ async def lifespan(app: FastAPI):
 
     # 预热 embedding + reranker 模型到 GPU（幂等，热重载不会重复申请显存）
     try:
-        status = await container.rag_engine.warmup_models()
-        if not all(status.values()):
-            logger.warning("Some models failed to load, system may have reduced functionality")
+        if container.rag_engine is not None:
+            status = await container.rag_engine.warmup_models()
+            if not all(status.values()):
+                logger.warning("Some models failed to load, system may have reduced functionality")
+        else:
+            logger.warning("RAGEngine not initialized, skipping model warmup")
     except Exception as e:
         logger.error(f"Model warmup failed: {e}")
 
@@ -115,7 +118,7 @@ def create_app() -> FastAPI:
     app.include_router(conversation_api.router)
     app.include_router(evaluation_api.router)
     app.include_router(health_api.router)
-    app.include_router(metrics_api.router)
+    app.include_router(metrics_router)
 
     return app
 

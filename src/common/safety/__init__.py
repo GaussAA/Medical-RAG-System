@@ -10,10 +10,17 @@ from typing import Protocol
 # SafetyResult and SafetyCheckPort are co-located so they share the same type.
 # The concrete implementation (SafetyChecker in checker.py) also imports from here,
 # ensuring Protocol structural typing works with mypy.
-from src.common.safety.checker import SafetyResult
+from src.common.safety.checker import SafetyChecker, SafetyResult
 
 
 class SafetyCheckPort(Protocol):
     """Minimal interface: what other modules need from SafetyChecker."""
 
     def check(self, text: str) -> SafetyResult: ...
+
+
+__all__ = [
+    "SafetyChecker",
+    "SafetyResult",
+    "SafetyCheckPort",
+]

@@ -7,7 +7,7 @@ from loguru import logger
 from src.query import HybridRetrieverPort
 
 # ponytail: concrete import for fallback only; DI path uses HybridRetrieverPort
-from src.query.retrieval.hybrid import HybridRetriever
+from src.query.retrieval import HybridRetriever
 
 
 class RetrievalIndexer:

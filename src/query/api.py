@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from src.common.di.deps import APIKeyDep, RAGEngineDep, limiter
+from src.common.di import APIKeyDep, RAGEngineDep, limiter
 from src.common.models import QueryRequest, QueryResponse, RiskWarning
 
 router = APIRouter(prefix="/api/v1", tags=["query"])

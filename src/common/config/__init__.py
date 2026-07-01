@@ -20,10 +20,10 @@ from src.common.config.settings import (
     SafetyConfig,
     Settings,
     StreamlitConfig,
+    add_settings_observer,
     get_settings,
     load_config,
     reload_settings,
-    add_settings_observer,
     remove_settings_observer,
 )
 

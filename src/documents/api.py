@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from loguru import logger
 from sqlalchemy import text
 
-from src.common.database.models import Document
+from src.common.database import Document
 from src.common.models import (
     BatchDeleteRequest,
     BatchOperationResponse,
@@ -35,8 +35,8 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
 async def process_document_background(doc_id: str, file_path: str, title: str | None = None):
     """后台处理文档（使用独立的 DocumentService 实例）"""
-    from src.common.database.engine import get_session_factory
-    from src.documents.service import DocumentService
+    from src.common.database import get_session_factory
+    from src.documents import DocumentService
 
     factory = get_session_factory()
     async_session = factory()
@@ -62,8 +62,8 @@ async def process_batch_documents_background(
     """
     批量处理文档 - 统一向量化，只加载一次 embedding 模型。
     """
-    from src.common.database.engine import get_session_factory
-    from src.documents.processor import DocumentProcessor
+    from src.common.database import get_session_factory
+    from src.documents import DocumentProcessor
     from src.query.engine import RAGEngine
 
     factory = get_session_factory()
@@ -138,7 +138,7 @@ async def process_batch_documents_background(
                 retrieved_nodes,
             ) in doc_chunks_map.items():
                 try:
-                    from src.common.database.models import Heading
+                    from src.common.database import Heading
 
                     position_to_id: dict[int, str] = {}
                     position_to_heading: dict[int, uuid.UUID] = {}
@@ -171,7 +171,7 @@ async def process_batch_documents_background(
             success = await rag_engine.process_document(all_nodes)
             if not success:
                 logger.warning(f"[Batch {batch_id}] GPU vectorization failed, falling back to CPU")
-                from src.documents.indexer import RetrievalIndexer
+                from src.documents import RetrievalIndexer
 
                 indexer = RetrievalIndexer()
                 await indexer.add_documents(all_nodes)
@@ -186,8 +186,8 @@ async def process_batch_documents_background(
                 retrieved_nodes,
             ) in doc_chunks_map.items():
                 try:
-                    from src.common.database.models import Chunk as DBChunk
-                    from src.common.database.models import Document as DBDocument
+                    from src.common.database import Chunk as DBChunk
+                    from src.common.database import Document as DBDocument
 
                     # Use the actual heading IDs saved in Step 2
                     heading_ids_map = doc_heading_ids.get(doc_id, {})
@@ -503,7 +503,7 @@ async def list_documents(
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
 ) -> DocumentListResponse:
     """List documents with filtering and pagination."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     # Parse tags from comma-separated string
     tag_list = [t.strip().lower() for t in tags.split(",")] if tags else None
@@ -555,7 +555,7 @@ async def get_document_status(
     document_id: str,
 ) -> DocumentStatus:
     """从数据库直接读取文档状态"""
-    from src.common.database.engine import get_session_factory
+    from src.common.database import get_session_factory
 
     factory = get_session_factory()
     async with factory() as session:
@@ -578,7 +578,7 @@ async def update_document(
     update_data: DocumentUpdateRequest,
 ) -> DocumentStatus:
     """Update document tags and/or status."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     async with DocumentStore() as store:
         doc = await store.update_document(
@@ -606,7 +606,7 @@ async def get_document_preview(
     document_id: str,
 ) -> DocumentPreviewResponse:
     """Get document preview (text preview or processing status)."""
-    from src.common.database.engine import get_session_factory
+    from src.common.database import get_session_factory
 
     factory = get_session_factory()
     async with factory() as session:
@@ -666,7 +666,7 @@ async def get_document_chunks(
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
 ) -> ChunkListResponse:
     """Get all chunks for a document with pagination."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     async with DocumentStore() as store:
         chunks, total = await store.get_chunks(document_id, page=page, page_size=page_size)
@@ -698,7 +698,7 @@ async def update_chunk(
     update_data: ChunkUpdateRequest,
 ) -> dict[str, str]:
     """Update a chunk's content and/or metadata."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     # Update chunk in PostgreSQL
     async with DocumentStore() as store:
@@ -714,7 +714,7 @@ async def update_chunk(
     # If content changed, need to re-index
     if update_data.content:
         # Delete old vector from Qdrant and BM25, then re-add
-        from src.documents.indexer import RetrievalIndexer
+        from src.documents import RetrievalIndexer
 
         indexer = RetrievalIndexer()
 
@@ -734,7 +734,7 @@ async def delete_chunk(
     chunk_id: str,
 ) -> dict[str, str]:
     """Delete a single chunk from a document."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     async with DocumentStore() as store:
         success = await store.delete_chunk(document_id, chunk_id)
@@ -742,7 +742,7 @@ async def delete_chunk(
         raise HTTPException(status_code=404, detail="Chunk not found")
 
     # Delete from vector index
-    from src.documents.indexer import RetrievalIndexer
+    from src.documents import RetrievalIndexer
 
     indexer = RetrievalIndexer()
     await indexer.delete_documents(document_id, 1)
@@ -756,7 +756,7 @@ async def batch_delete_documents(
     batch_data: BatchDeleteRequest,
 ) -> BatchOperationResponse:
     """Delete multiple documents by ID."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     if len(batch_data.ids) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 documents per batch operation")
@@ -771,7 +771,7 @@ async def batch_delete_documents(
         for doc_id in batch_data.ids:
             try:
                 # Delete from vector/BM25
-                from src.documents.indexer import RetrievalIndexer
+                from src.documents import RetrievalIndexer
 
                 indexer = RetrievalIndexer()
                 await indexer.delete_documents(doc_id, 100)  # Approximate max chunks
@@ -794,7 +794,7 @@ async def batch_update_documents(
     batch_data: BatchUpdateRequest,
 ) -> BatchOperationResponse:
     """Update status and/or tags for multiple documents."""
-    from src.documents.store import DocumentStore
+    from src.documents import DocumentStore
 
     if len(batch_data.ids) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 documents per batch operation")
@@ -835,10 +835,8 @@ async def check_consistency(
     Returns a detailed report of which documents exist in which stores
     and highlights inconsistencies. Optionally repairs them automatically.
     """
-    from src.conversation import ConsistencyCheckerPort
-
     # ponytail: local import; ConsistencyChecker satisfies the port structurally
-    from src.conversation.consistency import ConsistencyChecker
+    from src.conversation import ConsistencyChecker, ConsistencyCheckerPort
 
     checker: ConsistencyCheckerPort = ConsistencyChecker()
     result = await checker.check_all_consistency(repair=repair)
@@ -856,10 +854,8 @@ async def cleanup_orphaned_data(
     This is a maintenance endpoint to clean up after failed deletions
     or other inconsistencies.
     """
-    from src.conversation import ConsistencyCheckerPort
-
     # ponytail: local import; ConsistencyChecker satisfies the port structurally
-    from src.conversation.consistency import ConsistencyChecker
+    from src.conversation import ConsistencyChecker, ConsistencyCheckerPort
 
     checker: ConsistencyCheckerPort = ConsistencyChecker()
     result = await checker.cleanup_orphans()
@@ -880,7 +876,7 @@ async def rebuild_bm25_index(
     Note: This only rebuilds the BM25 index in memory. For persistence,
     ensure bm25_persist_path is configured in config.yaml.
     """
-    from src.documents.indexer import RetrievalIndexer
+    from src.documents import RetrievalIndexer
 
     indexer = RetrievalIndexer()
     result = await indexer.rebuild_bm25_from_qdrant()

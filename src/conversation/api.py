@@ -3,8 +3,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from src.common.database.engine import get_session_factory
-from src.common.database.models import Conversation, Message
+from src.common.database import Conversation, Message, get_session_factory
 from src.common.models import ConversationSession
 from src.common.models import Message as MessageSchema
 

@@ -10,15 +10,15 @@ from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.cache.manager import CacheManager
+from src.common.cache import CacheManager
 from src.common.config.settings import Settings, get_settings
-from src.common.database.engine import (
+from src.common.database import (
+    Base,  # noqa: F401 - ensure models are loaded
     _ensure_engine_initialized,
     close_engine,
     get_session_factory,
 )
-from src.common.database.models import Base  # noqa: F401 - ensure models are loaded
-from src.common.safety.checker import SafetyChecker
+from src.common.safety import SafetyChecker
 from src.conversation.manager import SessionManager
 from src.documents.indexer import RetrievalIndexer
 from src.documents.processor import DocumentProcessor
