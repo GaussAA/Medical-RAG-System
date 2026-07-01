@@ -1,3 +1,4 @@
+"""Document lifecycle management — upload, process, index, and delete documents."""
 import hashlib
 import uuid
 from pathlib import Path

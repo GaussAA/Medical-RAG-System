@@ -1,3 +1,4 @@
+"""Health check API endpoints."""
 from datetime import datetime
 from typing import Any
 

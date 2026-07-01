@@ -1,3 +1,4 @@
+"""Prompt builder — constructs system and user prompts with context injection."""
 # src/query/generation/prompt_builder.py
 from typing import Any
 

@@ -1,3 +1,4 @@
+"""Prompt templates and builders for medical RAG system."""
 SYSTEM_PROMPT = """你是一个专业的医疗知识问答助手。你的职责是：
 1. 基于提供的参考信息**准确、完整**地回答用户问题
 2. 在回答中**明确标注信息来源**，使用「来源X」格式

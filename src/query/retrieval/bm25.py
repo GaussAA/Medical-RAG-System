@@ -1,3 +1,4 @@
+"""BM25 retriever — keyword-based retrieval with jieba tokenization and disk persistence."""
 import asyncio
 import json
 from pathlib import Path

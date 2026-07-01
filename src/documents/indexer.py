@@ -1,3 +1,4 @@
+"""Retrieval indexer — synchronizes documents to vector and BM25 indexes."""
 import uuid as uuid_lib
 from typing import Any
 

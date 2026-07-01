@@ -1,3 +1,4 @@
+"""Session manager — multi-turn conversation context with Redis cache and PostgreSQL persistence."""
 import uuid
 from datetime import UTC, datetime
 

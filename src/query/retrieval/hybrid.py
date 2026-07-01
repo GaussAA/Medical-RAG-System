@@ -1,3 +1,4 @@
+"""Hybrid retriever — combines vector similarity and BM25 keyword search with RRF fusion."""
 import asyncio
 from typing import Any
 

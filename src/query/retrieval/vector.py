@@ -1,3 +1,4 @@
+"""Vector retriever — Qdrant-based embedding search with lazy GPU model loading."""
 import asyncio
 from typing import Any
 

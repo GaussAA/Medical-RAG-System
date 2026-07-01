@@ -1,3 +1,4 @@
+"""Document processing pipeline — parse, chunk, and prepare for indexing."""
 from pathlib import Path
 from typing import Any
 

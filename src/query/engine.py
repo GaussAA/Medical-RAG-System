@@ -1,3 +1,4 @@
+"""RAG engine — query orchestration: safety check, retrieval, rerank, generation, confidence."""
 import asyncio
 import time
 from collections.abc import AsyncGenerator

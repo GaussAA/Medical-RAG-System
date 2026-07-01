@@ -1,3 +1,4 @@
+"""Cross-encoder reranker — re-ranks retrieved candidates using a CrossEncoder model."""
 from typing import Any
 
 import torch

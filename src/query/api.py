@@ -1,3 +1,4 @@
+"""Query API routes — streaming and synchronous RAG query endpoints."""
 import json
 import uuid
 

@@ -1,3 +1,4 @@
+"""Document management API routes — upload, list, delete, batch, and consistency check."""
 import asyncio
 import re
 import uuid

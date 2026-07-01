@@ -1,3 +1,4 @@
+"""Session management API routes — create, list, delete sessions and messages."""
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select

@@ -1,3 +1,5 @@
+"""LLM generator — async OpenAI client with retry, streaming, and caching."""
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -134,7 +136,7 @@ class LLMGenerator:
         query: str,
         contexts: list[RetrievedNode],
         conversation_history: list[dict[str, Any]] | None = None,
-    ):
+    ) -> AsyncGenerator[str, None]:
         system_prompt, user_prompt = PromptBuilder.build(query, contexts)
 
         messages = self._build_messages_with_history(

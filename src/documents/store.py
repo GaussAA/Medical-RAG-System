@@ -1,3 +1,4 @@
+"""Document store — PostgreSQL CRUD for documents, chunks, and headings."""
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
