@@ -41,11 +41,11 @@ graph LR
 
 ## Parser Factory
 
-**File**: [rag/parser/__init__.py](../../rag/parser/__init__.py)
+**File**: `src/documents/parser/__init__.py`
 
 **Entry Point**: `parse_document_with_headings(file_path) -> (ParsedDocument, heading_tree_list)`
 
-**File**: [rag/parser/markdown_parser.py](../../rag/parser/markdown_parser.py)
+**File**: `src/documents/parser/markdown_parser.py`
 
 ### Heading Tree Extraction
 
@@ -69,7 +69,7 @@ Tables are detected in two ways:
 
 ## HierarchicalChunker
 
-**File**: [rag/chunking/hierarchical_chunker.py](../../rag/chunking/hierarchical_chunker.py)
+**File**: `src/documents/chunker.py`
 
 **Strategy**:
 1. Split text by heading boundaries (H1-H6)
@@ -100,7 +100,7 @@ strategy: "hierarchical"
 
 ## DocumentService Lifecycle
 
-**File**: [app/services/document.py](../../app/services/document.py)
+**File**: `src/documents/service.py`
 
 ### Upload & Process Flow
 
@@ -183,7 +183,7 @@ sequenceDiagram
 
 ## Batch Upload
 
-**File**: [app/api/routes/documents.py](../../app/api/routes/documents.py)
+**File**: `src/documents/api.py`
 
 ### API Endpoints
 
@@ -273,7 +273,7 @@ class BatchUploadStatus(BaseModel):
 
 ## Chunk Metadata
 
-**File**: [app/models/schemas.py](../../app/models/schemas.py)
+**File**: `src/common/models.py`
 
 ```python
 class ChunkMetadata(BaseModel):

@@ -19,7 +19,7 @@ graph LR
 
 ## SessionManager
 
-**File**: [app/services/session.py](../../app/services/session.py)
+**File**: `src/conversation/manager.py`
 
 **Responsibility**: Session state management, message persistence, FIFO eviction
 
@@ -166,7 +166,7 @@ conversation_history = [
 ]
 ```
 
-In `build_user_prompt()` (rag/generation/prompt.py), history is formatted:
+In `build_user_prompt()` (`src/query/generation/prompt.py`), history is formatted:
 
 ```
 ## 对话历史

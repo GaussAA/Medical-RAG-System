@@ -1,8 +1,8 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.core.metrics import ERROR_COUNT
-from app.core.rag_engine import RAGEngine
-from app.models.schemas import QueryRequest, SafetyResult
+from src.common.monitoring.metrics import ERROR_COUNT
+from src.query.engine import RAGEngine
+from src.common.models import QueryRequest, SafetyResult
 
 
 class TestRAGEngineErrorClassification:

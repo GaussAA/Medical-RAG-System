@@ -1,6 +1,6 @@
 import pytest
 
-from rag.parser.markdown_parser import MarkdownParser
+from src.documents.parser import MarkdownParser
 
 
 class TestMarkdownParser:

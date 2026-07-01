@@ -1,6 +1,6 @@
 # tests/unit/test_citation_verifier.py
-from app.models.schemas import Citation, CitationPosition, RetrievedNode
-from app.services.citation_verifier import CitationVerifier
+from src.common.models import Citation, CitationPosition, RetrievedNode
+from src.query.citation.verifier import CitationVerifier
 
 
 def _make_ctx(

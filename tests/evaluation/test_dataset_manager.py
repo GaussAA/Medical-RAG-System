@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from rag.evaluation.dataset_manager import (
+from src.evaluation.dataset_manager import (
     DatasetManager,
     DatasetValidator,
     ValidationReport,

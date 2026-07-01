@@ -33,10 +33,10 @@
 
 | 文件/组件                              | 问题                                        | 动作                                                |
 | -------------------------------------- | ------------------------------------------- | --------------------------------------------------- |
-| `app/core/risk_warnings.py`            | 定义但从未被RAGEngine使用                   | 评估：合并到RAGEngine `_generate_warnings()` 或移除 |
+| `src/risk_warnings.py`            | 定义但从未被RAGEngine使用                   | 评估：合并到RAGEngine `_generate_warnings()` 或移除 |
 | `CitationVerifier.verify()`            | 空壳逻辑，无实际验证                        | 重构为真实验证逻辑或移除                            |
-| `config/settings.py` Observer          | 初始加载不触发，仅 `reload_settings()` 生效 | 简化或移除观察者模式                                |
-| `app/services/session.py` 中未使用导入 | 检查并清理                                  | 移除                                                |
+| `src/common/config/settings.py` Observer          | 初始加载不触发，仅 `reload_settings()` 生效 | 简化或移除观察者模式                                |
+| `src/session.py` 中未使用导入 | 检查并清理                                  | 移除                                                |
 
 ### 2.2 异步模式统一
 
@@ -95,7 +95,7 @@ app.add_middleware(
 
 ### 2.5 模块边界重划
 
-**当前问题**: `rag/generation/llm_generator.py` 职责过重（LLM调用 + Citation提取 + Prompt构建）
+**当前问题**: `src/query/generation/generator.py` 职责过重（LLM调用 + Citation提取 + Prompt构建）
 
 **重构后**:
 ```
@@ -131,7 +131,7 @@ rag/retrieval/
 | LLM生成缓存   | `llm:{prompt_hash}`               | 10min | LRU      |
 | 文档Chunk     | `chunk:{chunk_id}`                | 1h    | LRU      |
 
-**实现位置**: `app/services/cache.py`（新建）
+**实现位置**: `src/cache.py`（新建）
 
 **接口**:
 ```python
@@ -144,7 +144,7 @@ class CacheService:
 
 ### 3.2 评估器 CLI
 
-**入口**: `rag/evaluation/cli.py`
+**入口**: `src/evaluation/cli.py`
 
 **命令**:
 ```bash

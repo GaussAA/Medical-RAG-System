@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import RetrievedNode
-from rag.retrieval.hybrid_retriever import HybridRetriever
+from src.common.models import RetrievedNode
+from src.query.retrieval.hybrid import HybridRetriever
 
 
 class TestHybridRetrieverQueryDetection:
@@ -98,7 +98,7 @@ class TestHybridRetrieverRRF:
     """Test HybridRetriever reciprocal rank fusion."""
 
     def setup_method(self):
-        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
+        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -169,7 +169,7 @@ class TestHybridRetrieverParallelSearch:
     """Test HybridRetriever parallel search."""
 
     def setup_method(self):
-        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
+        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -247,7 +247,7 @@ class TestHybridRetrieverSearch:
     """Test HybridRetriever search method."""
 
     def setup_method(self):
-        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
+        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -346,7 +346,7 @@ class TestHybridRetrieverAddDocuments:
     """Test HybridRetriever add_documents."""
 
     def setup_method(self):
-        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
+        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -391,7 +391,7 @@ class TestHybridRetrieverDeleteDocuments:
     """Test HybridRetriever delete_documents."""
 
     def setup_method(self):
-        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
+        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -431,7 +431,7 @@ class TestHybridRetrieverDeleteDocumentsAtomic:
     """Test HybridRetriever delete_documents_atomic."""
 
     def setup_method(self):
-        with patch("rag.retrieval.hybrid_retriever.get_settings") as mock_settings:
+        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -505,14 +505,14 @@ class TestBM25RetrieverFilters:
     """Test BM25Retriever filter support."""
 
     def setup_method(self):
-        from rag.retrieval.bm25_retriever import BM25Retriever
+        from src.query.retrieval.bm25 import BM25Retriever
 
         self.retriever = BM25Retriever()
 
     @pytest.mark.asyncio
     async def test_retrieve_with_content_type_filter(self):
         """Should filter by content_type."""
-        from app.models.schemas import RetrievedNode
+        from src.common.models import RetrievedNode
 
         nodes = [
             RetrievedNode(
@@ -539,7 +539,7 @@ class TestBM25RetrieverFilters:
     @pytest.mark.asyncio
     async def test_retrieve_with_doc_id_filter(self):
         """Should filter by doc_id."""
-        from app.models.schemas import RetrievedNode
+        from src.common.models import RetrievedNode
 
         nodes = [
             RetrievedNode(
@@ -565,7 +565,7 @@ class TestBM25RetrieverFilters:
     @pytest.mark.asyncio
     async def test_retrieve_with_heading_id_filter(self):
         """Should filter by heading_id."""
-        from app.models.schemas import RetrievedNode
+        from src.common.models import RetrievedNode
 
         nodes = [
             RetrievedNode(

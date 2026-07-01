@@ -44,7 +44,7 @@ sequenceDiagram
 
 ### 1. SafetyChecker
 
-**File**: [app/core/safety.py](../../app/core/safety.py)
+**File**: `src/common/safety/checker.py`
 
 **Responsibility**: Content moderation, sensitive word detection
 
@@ -54,7 +54,7 @@ sequenceDiagram
 
 ### 2. HybridRetriever
 
-**File**: [rag/retrieval/hybrid_retriever.py](../../rag/retrieval/hybrid_retriever.py)
+**File**: `src/query/retrieval/hybrid.py`
 
 **Responsibility**: Parallel BM25 + vector search with RRF fusion
 
@@ -72,7 +72,7 @@ final_top_k = 5
 
 ### 3. Reranker (CrossEncoder)
 
-**File**: [rag/reranker/cross_encoder.py](../../rag/reranker/cross_encoder.py)
+**File**: `src/query/reranker/cross_encoder.py`
 
 **Responsibility**: Re-rank retrieved results using cross-encoder
 
@@ -85,7 +85,7 @@ final_top_k = 5
 
 ### 4. LLMGenerator
 
-**File**: [rag/generation/llm_generator.py](../../rag/generation/llm_generator.py)
+**File**: `src/query/generation/generator.py`
 
 **Responsibility**: Generate answer with citations using DeepSeek
 
@@ -95,7 +95,7 @@ final_top_k = 5
 
 ### 5. ConfidenceEvaluator
 
-**File**: [app/core/confidence.py](../../app/core/confidence.py)
+**File**: `src/query/confidence.py`
 
 **Responsibility**: Score context relevance and answer completeness
 
@@ -105,7 +105,7 @@ final_top_k = 5
 
 ### 6. RiskWarning Generator
 
-**File**: [app/core/risk_warnings.py](../../app/core/risk_warnings.py)
+**File**: `src/query/generation/warnings.py`
 
 **Responsibility**: Generate medical risk warnings based on answer content
 
@@ -119,7 +119,7 @@ final_top_k = 5
 
 ## RAGEngine Query Flow
 
-**File**: [app/core/rag_engine.py](../../app/core/rag_engine.py)
+**File**: `src/query/engine.py`
 
 ```python
 async def query(self, request: QueryRequest) -> QueryResponse:
@@ -162,7 +162,7 @@ class RAGConfig(BaseModel):
     generation: GenerationConfig  # include_citations, include_warnings
 ```
 
-**YAML Config** (`config/config.yaml`):
+**YAML Config** (`src/common/config/config.yaml`):
 ```yaml
 rag:
   retrieval:

@@ -57,7 +57,7 @@ graph TB
 
 ## Component Responsibilities
 
-### API Layer (`app/api/routes/`)
+### API Layer (`src/`)
 | Endpoint                             | Service           | Purpose                    |
 | ------------------------------------ | ----------------- | -------------------------- |
 | `POST /api/v1/documents/upload`      | DocumentService   | Upload single document     |
@@ -136,8 +136,8 @@ graph LR
 
 | File                                                       | Responsibility                                 |
 | ---------------------------------------------------------- | ---------------------------------------------- |
-| [app/main.py](../../app/main.py)                           | FastAPI app factory, CORS, router registration |
-| [app/core/rag_engine.py](../../app/core/rag_engine.py)     | Main query orchestration                       |
-| [app/services/document.py](../../app/services/document.py) | Document lifecycle management                  |
-| [app/services/session.py](../../app/services/session.py)   | Session state, message eviction                |
+| `src/main.py`                           | FastAPI app factory, CORS, router registration |
+| `src/query/engine.py`     | Main query orchestration                       |
+| `src/documents/service.py` | Document lifecycle management                  |
+| `src/conversation/manager.py`   | Session state, message eviction                |
 | [config/settings.py](../../config/settings.py)             | Pydantic settings with YAML config             |

@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from rag.generation.llm_generator import LLMGenerator
+from src.query.generation.generator import LLMGenerator
 
 
 class TestLLMGenerator:

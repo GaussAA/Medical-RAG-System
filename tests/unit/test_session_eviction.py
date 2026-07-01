@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.services.session import SessionManager
+from src.conversation.manager import SessionManager
 
 
 class TestSessionMessageEviction:

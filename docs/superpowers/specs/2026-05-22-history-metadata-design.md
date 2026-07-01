@@ -14,7 +14,7 @@
 
 ### 1. API 层改造
 
-**文件**: `app/api/routes/sessions.py`
+**文件**: `src/sessions.py`
 
 修改 `/sessions/{session_id}/messages` 接口，从 `Message.extra_data` 反序列化 `confidence`/`citations`/`warnings`，返回结构化字段：
 
@@ -33,7 +33,7 @@
 
 ### 2. Message Schema 扩展
 
-**文件**: `app/models/schemas.py`
+**文件**: `src/common/models`.py`
 
 扩展 `Message` schema，增加显式字段：
 
@@ -51,13 +51,13 @@ class Message(BaseModel):
 
 ### 3. 前端历史页面改造
 
-**文件**: `streamlit_app/pages/history.py`
+**文件**: `frontend/pages/history.py`
 
 加载历史消息时保留完整 metadata，并在 UI 中显示置信度、警告和引用来源。
 
 ### 4. 前端 query.py 兼容性
 
-**文件**: `streamlit_app/pages/query.py`
+**文件**: `frontend/pages/query.py`
 
 确保加载历史消息时保留 metadata，与 history.py 保持一致。
 
@@ -77,7 +77,7 @@ MessageSchema 返回
 
 | 文件 | 改动 |
 |------|------|
-| `app/models/schemas.py` | Message schema 增加显式字段 |
-| `app/api/routes/sessions.py` | 反序列化 metadata 到显式字段 |
-| `streamlit_app/pages/history.py` | 加载历史时保留并渲染 metadata |
-| `streamlit_app/pages/query.py` | 加载历史时保留 metadata |
+| `src/common/models`.py` | Message schema 增加显式字段 |
+| `src/sessions.py` | 反序列化 metadata 到显式字段 |
+| `frontend/pages/history.py` | 加载历史时保留并渲染 metadata |
+| `frontend/pages/query.py` | 加载历史时保留 metadata |

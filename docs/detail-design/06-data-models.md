@@ -72,7 +72,7 @@ erDiagram
 
 ## Database Models
 
-**File**: [app/models/database.py](../../app/models/database.py)
+**File**: `src/common/database/models.py`
 
 ### Document
 ```python
@@ -177,7 +177,7 @@ class Message(Base):
 
 ## API Schemas
 
-**File**: [app/models/schemas.py](../../app/models/schemas.py)
+**File**: `src/common/models.py`
 
 ### Core Schemas
 

@@ -6,7 +6,7 @@ During retrieval, queries are analyzed to detect content-type intent. When a que
 
 ## Detection Logic
 
-**File**: [rag/retrieval/hybrid_retriever.py](../../rag/retrieval/hybrid_retriever.py) § `_detect_query_type()`
+**File**: `src/query/retrieval/hybrid.py` § `_detect_query_type()`
 
 ### Query Type Patterns
 
@@ -42,7 +42,7 @@ def _detect_query_type(self, query: str) -> str | None:
 
 ## Content-Type Boosting
 
-**File**: [rag/retrieval/hybrid_retriever.py](../../rag/retrieval/hybrid_retriever.py) § `_boost_by_content_type()`
+**File**: `src/query/retrieval/hybrid.py` § `_boost_by_content_type()`
 
 After RRF fusion, results are reordered based on detected query type:
 

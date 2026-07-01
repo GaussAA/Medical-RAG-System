@@ -1,5 +1,5 @@
-from app.core.confidence import ConfidenceEvaluator
-from app.models.schemas import RetrievedNode
+from src.query.confidence import ConfidenceEvaluator
+from src.common.models import RetrievedNode
 
 
 class TestConfidenceEvaluator:

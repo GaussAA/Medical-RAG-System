@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import Message
-from app.services.session import SessionManager
+from src.common.models import Message
+from src.conversation.manager import SessionManager
 
 
 class TestSessionManager:
@@ -29,13 +29,13 @@ class TestSessionManager:
 
     def test_get_session(self):
         created = self.manager.create_session()
-        retrieved = self.manager.get_session(created.session_id)
+        retrieved = self.manager.get_session_sync(created.session_id)
 
         assert retrieved is not None
         assert retrieved.session_id == created.session_id
 
     def test_get_session_not_found(self):
-        retrieved = self.manager.get_session("nonexistent-id")
+        retrieved = self.manager.get_session_sync("nonexistent-id")
         assert retrieved is None
 
     @pytest.mark.asyncio
@@ -72,7 +72,7 @@ class TestSessionManager:
             content="关于糖尿病的诊断标准是什么？",
         )
 
-        updated = self.manager.get_session(session.session_id)
+        updated = self.manager.get_session_sync(session.session_id)
         assert updated.session_title == "关于糖尿病的诊断标准是什么？"
 
     @pytest.mark.asyncio
@@ -89,7 +89,7 @@ class TestSessionManager:
             content="A" * 100,
         )
 
-        updated = self.manager.get_session(session.session_id)
+        updated = self.manager.get_session_sync(session.session_id)
         assert len(updated.session_title) == 53
         assert updated.session_title.endswith("...")
 
@@ -157,7 +157,7 @@ class TestSessionManager:
         result = await self.manager.delete_session(session.session_id)
 
         assert result is True
-        assert self.manager.get_session(session.session_id) is None
+        assert self.manager.get_session_sync(session.session_id) is None
 
     @pytest.mark.asyncio
     async def test_delete_session_not_found(self):
@@ -229,7 +229,7 @@ class TestSessionTitleGeneration:
             content="我想了解糖尿病的诊断标准",
         )
 
-        updated = self.manager.get_session(session.session_id)
+        updated = self.manager.get_session_sync(session.session_id)
         assert updated.session_title == "我想了解糖尿病的诊断标准"
 
     @pytest.mark.asyncio
@@ -242,7 +242,7 @@ class TestSessionTitleGeneration:
 
         await self.manager.add_message(session.session_id, "assistant", "有什么可以帮您？")
 
-        updated = self.manager.get_session(session.session_id)
+        updated = self.manager.get_session_sync(session.session_id)
         assert updated.session_title is None
 
     @pytest.mark.asyncio
@@ -256,7 +256,7 @@ class TestSessionTitleGeneration:
         await self.manager.add_message(session.session_id, "user", "第一个问题")
         await self.manager.add_message(session.session_id, "user", "第二个问题")
 
-        updated = self.manager.get_session(session.session_id)
+        updated = self.manager.get_session_sync(session.session_id)
         assert updated.session_title == "第一个问题"
 
 
@@ -787,7 +787,7 @@ class TestSessionManagerEdgeCases:
         manager.async_session = None
         manager._session_created_here = False
 
-        with patch("app.services.session.get_session_factory") as mock_factory:
+        with patch("src.conversation.manager.get_session_factory") as mock_factory:
             mock_session = MagicMock()
             # get_session_factory() returns a callable (the factory),
             # _ensure_session calls factory() which returns the session
@@ -798,7 +798,7 @@ class TestSessionManagerEdgeCases:
 
     def test_get_session_returns_none_for_missing(self):
         """get_session returns None for nonexistent id."""
-        assert self.manager.get_session("no-such-id") is None
+        assert self.manager.get_session_sync("no-such-id") is None
 
     @pytest.mark.asyncio
     async def test_delete_session_invalid_uuid(self):

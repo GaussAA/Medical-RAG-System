@@ -187,7 +187,7 @@ class RAGEvaluationResult:
 
 ## 配置
 
-评估相关配置在 `config/settings.py` 的 `EvaluationConfig` 中：
+评估相关配置在 `src/common/config/settings.py` 的 `EvaluationConfig` 中：
 
 ```python
 class EvaluationConfig(BaseModel):
@@ -204,7 +204,7 @@ class EvaluationConfig(BaseModel):
 ## 目录结构
 
 ```
-rag/evaluation/
+src/evaluation/
 ├── __init__.py
 ├── evaluator.py          # RAGEvaluator, RAGEvaluationResult, EvalGroundTruth
 ├── retrieval_eval.py      # RetrievalEvaluator, RetrievalMetrics

@@ -6,8 +6,8 @@ generation, and medical safety metrics.
 
 import pytest
 
-from app.models.schemas import Citation, CitationPosition, QueryResponse, RiskWarning
-from rag.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
+from src.common.models import Citation, CitationPosition, QueryResponse, RiskWarning
+from src.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
 
 
 class TestRAGEvaluatorIntegration:

@@ -15,8 +15,9 @@
 | **Session Management**  | [05-session-management.md](./05-session-management.md)       | 会话生命周期、消息持久化、FIFO驱逐             |
 | **Data Models**         | [06-data-models.md](./06-data-models.md)                     | PostgreSQL模型、API Schema、三层存储映射       |
 | **Configuration**       | [07-configuration.md](./07-configuration.md)                 | YAML配置、环境变量、设备选择                   |
-| **GPU Management**      | [08-gpu-memory-management.md](./08-gpu-memory-management.md) | 显存管理、模型迁移、懒加载策略                 |
+| **GPU Management**      | [08-gpu-memory-management.md](./08-gpu-memory-management.md) | ⚠️ [废弃] FP16 常驻 GPU 后不再需要 |
 | **Evaluation System**   | [11-evaluation-system.md](./11-evaluation-system.md)       | RAG评估、基准测试、指标体系                    |
+| **Tech Stack Analysis** | [../tech-stack-analysis.md](../tech-stack-analysis.md)     | 技术栈利用率评分、优化建议                   |
 
 ## 🤖 AI Context Management Guide
 
@@ -50,6 +51,6 @@ For specific questions about a module, directly reference the corresponding docu
 
 - [Project Requirements](../requirement/medical-rag.md)
 - [Data Flow Specification](../requirement/data-flow.md)
-- [API Schemas](../../app/models/schemas.py)
-- [Database Models](../../app/models/database.py)
-- [Main Application](../../app/main.py)
+- `src/common/models.py`
+- `src/common/database/models.py`
+- `src/main.py`

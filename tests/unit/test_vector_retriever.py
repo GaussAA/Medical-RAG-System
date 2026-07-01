@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import RetrievedNode
+from src.common.models import RetrievedNode
 
 
 class TestVectorRetriever:
@@ -11,7 +11,7 @@ class TestVectorRetriever:
     @pytest.mark.asyncio
     async def test_add_uses_executor_not_blocking(self):
         """Test that add() does not block on embedding encode."""
-        from rag.retrieval.vector_retriever import VectorRetriever
+        from src.query.retrieval.vector import VectorRetriever
 
         vr = VectorRetriever()
         mock_client = MagicMock()
@@ -47,7 +47,7 @@ class TestVectorRetriever:
     @pytest.mark.asyncio
     async def test_add_uses_pre_encoded_embedding_when_present(self):
         """Test that add() uses pre-encoded embedding from metadata without calling encode."""
-        from rag.retrieval.vector_retriever import VectorRetriever
+        from src.query.retrieval.vector import VectorRetriever
 
         vr = VectorRetriever()
         mock_client = MagicMock()

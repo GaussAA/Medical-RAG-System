@@ -10,35 +10,61 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 
 **详细架构**: [docs/detail-design/01-architecture-overview.md](docs/detail-design/01-architecture-overview.md)
 
+## 架构信息（2026-07-01 重构后）
+
+> 项目已从扁平结构重构为**模块化单体 + 垂直切片**架构。
+> 源码根目录为 `src/`，所有新代码在此目录下。
+> 旧目录（app/、rag/、config/）已删除。
+
+| 切片 | 路径 | 职责 |
+|------|------|------|
+| 横切层 | `src/common/` | config/database/cache/logging/monitoring/safety/DI |
+| 文档管理 | `src/documents/` | 上传/解析/分块/索引 |
+| RAG查询 | `src/query/` | 检索/重排/生成/引用验证 |
+| 会话管理 | `src/conversation/` | 多轮对话上下文 |
+| 评估系统 | `src/evaluation/` | RAG评估/基准测试/报告 |
+
+**入口**: `src/main.py`（FastAPI应用工厂）  
+**DI容器**: `src/common/di/container.py`  
+**配置**: `src/common/config/config.yaml`
+
+> ⚠️ 所有新导入使用 `src.*` 前缀
+
 ## 核心设计决策
 
 理解这些决策对于正确地在此项目中工作至关重要：
 
 ### 1. Markdown-only 处理
+
 - PDF/DOCX 支持已移除（解析可靠性问题）
 - 所有文档格式：`.md`、`.markdown`
 - [03-document-processing.md](docs/detail-design/03-document-processing.md) § Markdown-Only Processing
 
 ### 2. 层级感知分块 (Hierarchical Chunking)
+
 - 按 H1-H6 标题边界切分文档
 - 表格、列表作为独立语义单元保留
 - 每个 Chunk 携带 `heading_tree`（完整标题路径）和 `content_type`（text/table/list）
 - [03-document-processing.md](docs/detail-design/03-document-processing.md) § HierarchicalChunker
 
 ### 3. 查询类型 Boosting
+
 - 检测查询中的内容类型意图，表查询优先返回表格，药物查询优先返回列表
 - [04-retrieval-system.md](docs/detail-design/04-retrieval-system.md) § Query-Type Detection
 
 ### 4. 三存储同步策略
+
 - 删除顺序：PostgreSQL（先）→ Qdrant → BM25（后）
 - PostgreSQL 失败则中止，索引失败则记录不一致并用 `/cleanup-orphans` 修复
 - [01-architecture-overview.md](docs/detail-design/01-architecture-overview.md) § Synchronization Rules
 
 ### 5. 向量/BM25 权重
+
 - RRF 公式：`vector_weight=0.6`, `bm25_weight=0.4`, `rrf_k=60`
 - [04-retrieval-system.md](docs/detail-design/04-retrieval-system.md) § Reciprocal Rank Fusion
 
 ### 6. 多轮对话上下文注入
+
 - `QueryRequest` 可带 `session_id`，首次查询无 `session_id` 时自动创建
 - 历史通过 `conversation_history` 参数注入 LLM prompt
 - 消息持久化位置：`RAGEngine.query()` 内部
@@ -53,6 +79,7 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 - [03-document-processing.md](docs/detail-design/03-document-processing.md) § Batch Upload
 
 ### 8. RAG 评估系统
+
 - 评估维度：检索（Precision@K/Recall@K/NDCG@K/MRR）、生成（Faithfulness/Answer Relevancy）、医疗安全（实体准确率/警告覆盖率）
 - 评估器入口： 类，支持单次评估和批量基准测试
 - 评估数据集格式：
@@ -81,12 +108,12 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 ```bash
 # 环境初始化
 uv sync                                          # 安装依赖
-uv run python scripts/init_db.py                  # 初始化 PostgreSQL
-uv run python scripts/init_vector_db.py            # 初始化 Qdrant
+uv run python scripts/db/init_db.py               # 初始化 PostgreSQL
+uv run python scripts/db/init_qdrant.py            # 初始化 Qdrant
 
 # 启动服务
-uv run uvicorn app.main:app --reload             # 后端 (port 8000)
-uv run streamlit run streamlit_app/app.py         # 前端 (port 8501)
+uv run uvicorn src.main:app --reload             # 后端 (port 8000)
+uv run streamlit run frontend/app.py             # 前端 (port 8501)
 
 # 测试
 uv run pytest tests/unit/                         # 单元测试
@@ -95,37 +122,48 @@ uv run pytest tests/integration/                   # 集成测试（需 PostgreS
 
 ## 关键文件参考
 
-| 文件                                                                   | 职责                             |
-| ---------------------------------------------------------------------- | -------------------------------- |
-| [app/main.py](app/main.py)                                             | FastAPI 应用工厂、CORS、路由注册 |
-| [app/core/rag_engine.py](app/core/rag_engine.py)                       | RAG 查询编排入口                 |
-| [app/services/session.py](app/services/session.py)                     | Session 状态、消息持久化、驱逐   |
-| [app/api/routes/query.py](app/api/routes/query.py)                     | 查询 API 入口                    |
-| [app/api/routes/documents.py](app/api/routes/documents.py)             | 文档上传/批量上传 API            |
-| [rag/generation/llm_generator.py](rag/generation/llm_generator.py)     | LLM 调用、prompt 构建            |
-| [rag/retrieval/hybrid_retriever.py](rag/retrieval/hybrid_retriever.py) | 混合检索 + RRF                   |
-| [rag/evaluation/evaluator.py](rag/evaluation/evaluator.py)             | RAG 评估器入口                   |
-| [streamlit_app/app.py](streamlit_app/app.py)                           | Streamlit 前端入口               |
+| 文件 | 职责 |
+| ---- | ---- |
+| [src/main.py](src/main.py) | FastAPI 应用工厂、CORS、路由注册、DI 容器 |
+| [src/common/di/container.py](src/common/di/container.py) | 依赖注入容器（服务组装） |
+| [src/query/engine.py](src/query/engine.py) | RAG 查询编排入口（原 app/core/rag_engine.py） |
+| [src/conversation/manager.py](src/conversation/manager.py) | Session 状态、消息持久化、驱逐 |
+| [src/query/api.py](src/query/api.py) | 查询 API 入口 |
+| [src/documents/api.py](src/documents/api.py) | 文档上传/批量上传 API |
+| [src/query/generation/generator.py](src/query/generation/generator.py) | LLM 调用、prompt 构建 |
+| [src/query/retrieval/hybrid.py](src/query/retrieval/hybrid.py) | 混合检索 + RRF |
+| [src/evaluation/evaluator.py](src/evaluation/evaluator.py) | RAG 评估器入口 |
+| [frontend/app.py](frontend/app.py) | Streamlit 前端入口 |
+| [frontend/api_client.py](frontend/api_client.py) | 统一 API 客户端 |
 
 ## 代码组织
 
 ```
-app/
-├── api/routes/          # API 路由层
-├── core/               # 核心业务（RAGEngine）
-├── models/             # Pydantic schemas + SQLAlchemy models
-├── services/           # 服务层（Document, Session, Consistency）
-└── core/database.py    # 数据库连接管理
+src/                            # 源码根目录
+├── common/                    # 横切关注点
+│   ├── config/                # 配置管理（Pydantic Settings）
+│   ├── database/              # 数据库连接 + ORM 模型
+│   ├── cache/                 # Redis 缓存
+│   ├── logging/               # 日志持久化（文件轮转）
+│   ├── monitoring/            # Prometheus 指标
+│   ├── safety/               # 安全检查器
+│   ├── di/                   # DI容器 + FastAPI依赖
+│   ├── models.py             # Pydantic schemas
+│   └── api.py                # 健康检查
+├── documents/                 # 文档管理（垂直切片）
+│   ├── service/processor/store/indexer/parser/chunker/api
+├── query/                     # RAG 查询（垂直切片）
+│   ├── engine/confidence/retrieval/reranker/generation/citation/api
+├── conversation/              # 会话管理（垂直切片）
+│   ├── manager/consistency/api
+├── evaluation/                # 评估系统（垂直切片）
+│   └── evaluator/reporters/api
+└── main.py                   # 入口点
 
-rag/
-├── parser/             # 文档解析
-├── chunking/           # 分块策略
-├── retrieval/          # 检索器（Vector、BM25、Hybrid）
-├── reranker/          # 交叉编码重排序
-├── generation/        # LLM 生成
-└── evaluation/        # RAG 评估（检索/生成/医疗安全）
-
-streamlit_app/          # Streamlit 前端
+frontend/                      # Streamlit 前端
+├── api_client.py              # 统一 API 客户端
+├── app.py
+└── pages/
 ```
 
 ## 数据库模型关系
@@ -142,16 +180,21 @@ Conversation ───1:N──→ Message
 ## 补充说明
 
 ### msg_count 字段
+
 `ConversationSession` 有一个 `msg_count` 字段，用于跟踪会话消息数量。这与 `len(messages)` 不同，因为消息可能在达到限制时被驱逐。
 
 ### 引用验证与幻觉检测
+
 `RAGEngine._generate_warnings()` 直接生成风险警告，包含幻觉检测：
+
 - 检测未验证引用（`verified=False`）的比例
 - 超过阈值（默认 0.5）时触发 `hallucination` 警告
 - 配置项：`generation.citation_verification.hallucination_threshold`
 
 ### 警告生成方式
-`app/core/risk_warnings.py` 中的 `RiskWarningGenerator` 类**未被 RAGEngine 使用**。RAGEngine 直接在 `_generate_warnings()` 方法中生成警告，包含：
+
+`src/query/generation/warnings.py` 中的 `WarningsGenerator` **未被 RAGEngine 直接实例化**。RAGEngine 直接在 `_generate_warnings()` 方法中生成警告，包含：
+
 - `general` - 始终添加
 - `medication` - 检测到药物关键词
 - `diagnosis` - 检测到诊断关键词
@@ -168,8 +211,8 @@ Conversation ───1:N──→ Message
 
 ## 反模式警示
 
-| 禁止                                              | 说明                            |
-| ------------------------------------------------- | ------------------------------- |
+| 禁止                                               | 说明                            |
+| -------------------------------------------------- | ------------------------------- |
 | ❌ 在 `RAGEngine.query()` 外部调用 `add_message()` | 消息持久化应在 RAGEngine 内部   |
 | ❌ 修改 `db_confirmed` 标志                        | 这是内部实现细节                |
 | ❌ 打乱三存储删除顺序                              | 必须 PostgreSQL → Qdrant → BM25 |

@@ -60,7 +60,7 @@ streamlit_app/
 ### Task 1: 修复 VectorRetriever.add() 异步阻塞
 
 **Files:**
-- Modify: `rag/retrieval/vector_retriever.py:162-193`
+- Modify: `src/query/retrieval/vector.py:162-193`
 
 - [ ] **Step 1: 写失败的测试**
 
@@ -110,7 +110,7 @@ Expected: FAIL (method not using executor yet)
 
 - [ ] **Step 3: 实现修复**
 
-修改 `rag/retrieval/vector_retriever.py` 的 `add()` 方法：
+修改 `src/query/retrieval/vector.py` 的 `add()` 方法：
 
 ```python
 async def add(self, nodes: list[RetrievedNode]) -> None:
@@ -179,9 +179,9 @@ git commit -m "fix: use run_in_executor for embedding encode in VectorRetriever.
 ### Task 2: 清理 risk_warnings.py 并创建 WarningsGenerator
 
 **Files:**
-- Create: `rag/generation/warnings_generator.py`
-- Modify: `app/core/rag_engine.py:468-530`
-- Delete: `app/core/risk_warnings.py`
+- Create: `src/query/generation/warnings.py`
+- Modify: `src/rag_engine.py:468-530`
+- Delete: `src/risk_warnings.py`
 
 - [ ] **Step 1: 创建 WarningsGenerator 模块**
 
@@ -284,7 +284,7 @@ class WarningsGenerator:
 
 - [ ] **Step 2: 修改 RAGEngine 使用 WarningsGenerator**
 
-在 `app/core/rag_engine.py` 顶部添加导入：
+在 `src/rag_engine.py` 顶部添加导入：
 ```python
 from rag.generation.warnings_generator import WarningsGenerator
 ```
@@ -358,18 +358,18 @@ git commit -m "refactor: extract WarningsGenerator from RAGEngine, remove unused
 ### Task 3: 清理未使用导入 + 修复 CORS
 
 **Files:**
-- Modify: `app/services/session.py` (清理未使用导入)
-- Modify: `app/main.py:69-75` (修复CORS)
+- Modify: `src/session.py` (清理未使用导入)
+- Modify: `src/main.py:69-75` (修复CORS)
 
 - [ ] **Step 1: 检查 session.py 的未使用导入**
 
 Run: `pytest tests/unit/test_session_service.py -v` 先确认现有测试通过。
 
-检查 `app/services/session.py` 的 imports，识别未使用的并移除。
+检查 `src/session.py` 的 imports，识别未使用的并移除。
 
 - [ ] **Step 2: 修复 CORS 配置**
 
-检查 `config/settings.py` 中是否有 `cors_origins` 配置项，如果没有则添加：
+检查 `src/common/config/settings.py` 中是否有 `cors_origins` 配置项，如果没有则添加：
 
 ```yaml
 # config/settings.yaml
@@ -389,7 +389,7 @@ cors:
   allow_headers: ["*"]
 ```
 
-修改 `app/main.py`:
+修改 `src/main.py`:
 
 ```python
 app.add_middleware(
@@ -413,11 +413,11 @@ git commit -m "fix: restrict CORS origins and clean up unused imports"
 ### Task 4: 实现 CitationVerifier 真实验证逻辑
 
 **Files:**
-- Modify: `app/services/citation_verifier.py`
+- Modify: `src/citation_verifier.py`
 
 - [ ] **Step 1: 检查当前实现**
 
-读取 `app/services/citation_verifier.py` 了解当前 `extract_and_verify` 实现。
+读取 `src/citation_verifier.py` 了解当前 `extract_and_verify` 实现。
 
 - [ ] **Step 2: 添加真实验证逻辑**
 
@@ -539,9 +539,9 @@ git commit -m "test: add full pipeline integration test"
 ### Task 6: 模块边界重划 - LLMGenerator 分离
 
 **Files:**
-- Create: `rag/generation/prompt_builder.py`
+- Create: `src/query/generation/prompt_builder.py`
 - Create: `rag/generation/citation_extractor.py`
-- Modify: `rag/generation/llm_generator.py`
+- Modify: `src/query/generation/generator.py`
 
 - [ ] **Step 1: 创建 prompt_builder.py**
 
@@ -678,7 +678,7 @@ git commit -m "refactor: split LLMGenerator into PromptBuilder and CitationExtra
 **Files:**
 - Create: `rag/retrieval/query_boosting.py`
 - Create: `rag/retrieval/reranker.py`
-- Modify: `rag/retrieval/hybrid_retriever.py`
+- Modify: `src/query/retrieval/hybrid.py`
 
 - [ ] **Step 1: 创建 query_boosting.py**
 
@@ -770,7 +770,7 @@ git commit -m "refactor: extract QueryBoosting from HybridRetriever"
 ### Task 8: GPU 内存管理完善
 
 **Files:**
-- Modify: `app/core/gpu_memory_manager.py`
+- Modify: `src/gpu_memory_manager.py`
 
 - [ ] **Step 1: 统一显存查询接口**
 
@@ -830,8 +830,8 @@ git commit -m "perf: improve GPU memory management with unified status interface
 ### Task 9: Redis 缓存层
 
 **Files:**
-- Create: `app/core/cache.py`
-- Modify: `app/services/session.py` (集成缓存)
+- Create: `src/cache.py`
+- Modify: `src/session.py` (集成缓存)
 
 - [ ] **Step 1: 创建 CacheService**
 
@@ -916,7 +916,7 @@ git commit -m "feat: add Redis cache service for query and session caching"
 ### Task 10: 评估器 CLI
 
 **Files:**
-- Create: `rag/evaluation/cli.py`
+- Create: `src/evaluation/cli.py`
 
 - [ ] **Step 1: 创建 CLI 入口**
 
@@ -987,12 +987,12 @@ git commit -m "feat: add evaluation CLI for benchmarks"
 ### Task 11: Streamlit 完整 UI
 
 **Files:**
-- Create: `streamlit_app/components/chat_message.py`
-- Create: `streamlit_app/components/source_display.py`
-- Create: `streamlit_app/components/document_card.py`
-- Create: `streamlit_app/pages/chat.py`
-- Create: `streamlit_app/pages/evaluation.py`
-- Modify: `streamlit_app/app.py`
+- Create: `frontend/components/chat_message.py`
+- Create: `frontend/components/source_display.py`
+- Create: `frontend/components/document_card.py`
+- Create: `frontend/pages/chat.py`
+- Create: `frontend/pages/evaluation.py`
+- Modify: `frontend/app.py`
 
 - [ ] **Step 1: 创建聊天组件**
 
@@ -1069,7 +1069,7 @@ git commit -m "feat: add complete Streamlit chat UI"
 ### Task 12: 查询并行化验证
 
 **Files:**
-- Modify: `rag/retrieval/hybrid_retriever.py` (确保 asyncio.gather 正确使用)
+- Modify: `src/query/retrieval/hybrid.py` (确保 asyncio.gather 正确使用)
 
 - [ ] **Step 1: 验证并行检索**
 

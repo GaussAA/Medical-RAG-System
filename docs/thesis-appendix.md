@@ -147,7 +147,7 @@ flowchart TD
 
 ### B.1 RAG引擎核心实现
 
-**文件位置**: `app/core/rag_engine.py`
+**文件位置**: `src/rag_engine.py`
 
 ```python
 class RAGEngine:
@@ -221,7 +221,7 @@ class RAGEngine:
 
 ### B.2 混合检索器实现
 
-**文件位置**: `rag/retrieval/hybrid_retriever.py`
+**文件位置**: `src/query/retrieval/hybrid.py`
 
 ```python
 class HybridRetriever:
@@ -346,7 +346,7 @@ class HierarchicalChunker:
 
 ### B.4 会话管理服务
 
-**文件位置**: `app/services/session.py`
+**文件位置**: `src/session.py`
 
 ```python
 class SessionService:
@@ -970,7 +970,7 @@ erDiagram
 - Markdown结构清晰，便于层级分块
 
 **影响范围**:
-- `rag/parser/markdown_parser.py` 为主解析器
+- `src/documents/parser/markdown_parser.py` 为主解析器
 - API仅接受 `.md`, `.markdown` 文件
 
 ### G.2 层级感知分块
@@ -1096,7 +1096,7 @@ uv run python scripts/init_vector_db.py
 uv run uvicorn app.main:app --reload --port 8000
 
 # 5. 启动前端（新终端）
-uv run streamlit run streamlit_app/app.py --server.port 8501
+uv run streamlit run frontend/app.py --server.port 8501
 ```
 
 ---
@@ -1129,7 +1129,7 @@ uv run streamlit run streamlit_app/app.py --server.port 8501
 
 ## 附录J：系统配置完整示例
 
-**文件位置**: `config/settings.yaml`
+**文件位置**: `src/common/config/settings.yaml`
 
 ```yaml
 # ============================================

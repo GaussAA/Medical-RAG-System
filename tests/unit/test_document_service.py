@@ -2,11 +2,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import Chunk, ChunkMetadata, ParsedDocument
-from app.services.document import DocumentService
-from app.services.document_processor import DocumentProcessor
-from app.services.document_store import DocumentStore
-from app.services.retrieval_indexer import RetrievalIndexer
+from src.common.models import Chunk, ChunkMetadata, ParsedDocument
+from src.documents.service import DocumentService
+from src.documents.processor import DocumentProcessor
+from src.documents.store import DocumentStore
+from src.documents.indexer import RetrievalIndexer
 
 
 class TestDocumentProcessor:
@@ -159,7 +159,7 @@ class TestDocumentService:
         self.service.store.save_chunks = AsyncMock()
 
         # Patch parse_document_with_headings in rag.parser module
-        with patch("rag.parser.parse_document_with_headings") as mock_parse:
+        with patch("src.documents.parser.parse_document_with_headings") as mock_parse:
             mock_parse.return_value = (
                 ParsedDocument(
                     text_content="糖尿病是一种慢性代谢性疾病。",

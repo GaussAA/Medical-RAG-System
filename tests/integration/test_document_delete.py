@@ -9,7 +9,7 @@ class TestVectorDBDeletion:
 
     @pytest.mark.asyncio
     async def test_delete_document_calls_hybrid_retriever_delete(self):
-        from app.services.document import DocumentService
+        from src.documents.service import DocumentService
 
         service = DocumentService()
         doc_id = str(uuid.uuid4())
@@ -43,7 +43,7 @@ class TestVectorDBDeletion:
 
     @pytest.mark.asyncio
     async def test_delete_document_with_zero_chunks_does_not_call_delete(self):
-        from app.services.document import DocumentService
+        from src.documents.service import DocumentService
 
         service = DocumentService()
         doc_id = str(uuid.uuid4())
@@ -68,7 +68,7 @@ class TestVectorDBDeletion:
 
     @pytest.mark.asyncio
     async def test_delete_document_completely_removes_all_traces(self):
-        from app.services.document import DocumentService
+        from src.documents.service import DocumentService
 
         service = DocumentService()
         doc_id = str(uuid.uuid4())
@@ -102,7 +102,7 @@ class TestVectorDBDeletion:
 
     @pytest.mark.asyncio
     async def test_delete_document_postgresql_failure(self):
-        from app.services.document import DocumentService
+        from src.documents.service import DocumentService
 
         service = DocumentService()
         doc_id = str(uuid.uuid4())
@@ -127,7 +127,7 @@ class TestVectorDBDeletion:
 
     @pytest.mark.asyncio
     async def test_delete_document_partial_index_failure(self):
-        from app.services.document import DocumentService
+        from src.documents.service import DocumentService
 
         service = DocumentService()
         doc_id = str(uuid.uuid4())

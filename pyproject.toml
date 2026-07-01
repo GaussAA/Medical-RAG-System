@@ -14,16 +14,11 @@ dependencies = [
     # Database
     "sqlalchemy>=2.0.44",
     "asyncpg>=0.30.0",
-    "psycopg2-binary>=2.9.12",
     "alembic>=1.16.5",
     # Vector database
     "qdrant-client>=1.17.0",
     # Redis (with built-in asyncio support, replaces aioredis)
     "redis>=6.1.0",
-    # RAG framework
-    "llama-index>=0.14.21",
-    "llama-index-core>=0.14.21",
-    "llama-index-postprocessor-cohere-rerank>=0.3.0",
     # Embedding & Reranker
     "sentence-transformers>=5.4.0",
     "torch>=2.11.0",
@@ -61,14 +56,15 @@ dependencies = [
     # Observability
     "prometheus-client>=0.25.0",
     "slowapi>=0.1.9",
+    "plotly>=6.8.0",
 ]
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu128" }
+torch = { index = "pytorch-cu126" }
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
 [project.optional-dependencies]
@@ -79,8 +75,8 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["app*", "rag*", "config*", "streamlit_app*"]
+where = ["src", "."]
+include = ["src*", "frontend*"]
 exclude = ["tests*", "scripts*"]
 
 [build-system]
@@ -90,7 +86,6 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 120
 
-# 定义需要检查的规则（这里包含了 isort 的 I 规则和 pyflakes/pep8 等）
 [tool.ruff.lint]
 select = [
     "I",   # isort 导入排序
@@ -98,6 +93,10 @@ select = [
     "E",   # pycodestyle 错误
     "W",   # pycodestyle 警告
     "UP",  # pyupgrade 现代化语法
+    "N",   # pep8-naming 命名规范
+]
+extend-ignore = [
+    "N802",  # 允许函数名含大写（Pydantic validators 需大写）
 ]
 
 [tool.pytest.ini_options]

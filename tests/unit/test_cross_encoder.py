@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import torch
 
-from app.models.schemas import RetrievedNode
-from rag.reranker.cross_encoder import Reranker
+from src.common.models import RetrievedNode
+from src.query.reranker.cross_encoder import Reranker
 
 
 class TestRerankerInit:
@@ -12,7 +12,7 @@ class TestRerankerInit:
 
     def test_init_uses_defaults_from_settings(self):
         """Reranker should use settings when no args provided."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
+        with patch("src.query.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -50,7 +50,7 @@ class TestRerankerEnsureModelLoaded:
 
     def test_ensure_model_loaded_loads_model(self):
         """First access should load model."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
+        with patch("src.query.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -66,7 +66,7 @@ class TestRerankerEnsureModelLoaded:
 
     def test_ensure_model_loaded_called_once(self):
         """Model should only be loaded once."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
+        with patch("src.query.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cpu"
             mock_settings.return_value.models.reranker.batch_size = 16
@@ -81,7 +81,7 @@ class TestRerankerEnsureModelLoaded:
 
     def test_ensure_model_loaded_passes_torch_dtype_fp16(self):
         """Should pass model_kwargs with torch.float16 for FP16 inference."""
-        with patch("rag.reranker.cross_encoder.get_settings") as mock_settings:
+        with patch("src.query.reranker.cross_encoder.get_settings") as mock_settings:
             mock_settings.return_value.models.reranker.name = "test-model"
             mock_settings.return_value.models.reranker.device = "cuda"
             mock_settings.return_value.models.reranker.batch_size = 16

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import (
+from src.common.models import (
     BatchDeleteRequest,
     BatchOperationResponse,
     BatchUpdateRequest,
@@ -15,7 +15,7 @@ from app.models.schemas import (
     DocumentStatus,
     DocumentUpdateRequest,
 )
-from app.services.document_store import DocumentStore
+from src.documents.store import DocumentStore
 
 
 class TestDocumentStoreFiltering:

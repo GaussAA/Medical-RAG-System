@@ -2,7 +2,7 @@
 
 import pytest
 
-from rag.evaluation.generation_eval import GenerationEvaluator, GenerationMetrics
+from src.evaluation.generation_eval import GenerationEvaluator, GenerationMetrics
 
 
 class TestGenerationEvaluator:

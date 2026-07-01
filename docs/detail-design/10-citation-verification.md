@@ -6,7 +6,7 @@ The system extracts and verifies citations from LLM-generated answers to detect 
 
 ## Citation Verification Flow
 
-**File**: [app/services/citation_verifier.py](../../app/services/citation_verifier.py)
+**File**: `src/query/citation/verifier.py`
 
 ### Extraction
 
@@ -36,7 +36,7 @@ def extract_and_verify(answer: str, contexts: list[RetrievedNode]) -> list[Citat
 
 ## Hallucination Detection
 
-**File**: [app/core/rag_engine.py](../../app/core/rag_engine.py) § `_generate_warnings()`
+**File**: `src/query/engine.py` § `_generate_warnings()`
 
 Hallucination detection occurs during warning generation:
 
@@ -59,7 +59,7 @@ if citations and self.config.generation.citation_verification.enable:
 
 ## CitationPosition Enum
 
-**File**: [app/models/schemas.py](../../app/models/schemas.py)
+**File**: `src/common/models.py`
 
 ```python
 class CitationPosition(str, Enum):
@@ -112,7 +112,7 @@ The RAGEngine generates these warning types:
 
 ## Keywords for Warning Generation
 
-**File**: [app/core/rag_engine.py](../../app/core/rag_engine.py)
+**File**: `src/query/engine.py`
 
 ```python
 medication_keywords = ["药物", "用药", "剂量", "服药", "吃药"]
@@ -120,4 +120,4 @@ diagnosis_keywords = ["诊断", "确诊", "治疗方案"]
 emergency_keywords = ["紧急", "急诊", "立即", "马上"]
 ```
 
-**Note**: `app/core/risk_warnings.py` contains a `RiskWarningGenerator` class but it is NOT used by RAGEngine. The warnings are generated inline in `_generate_warnings()`.
+**Note**: `src/risk_warnings.py` contains a `RiskWarningGenerator` class but it is NOT used by RAGEngine. The warnings are generated inline in `_generate_warnings()`.

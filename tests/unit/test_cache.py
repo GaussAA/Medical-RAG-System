@@ -3,11 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.cache import CacheManager, CacheManagerSync, cached, make_cache_key
-
-# ============================================================================
-# TestMakeCacheKey
-# ============================================================================
+"""TestMakeCacheKey"""
+from src.common.cache.manager import CacheManager, cached, make_cache_key
 
 
 class TestMakeCacheKey:
@@ -267,15 +264,17 @@ class TestCacheManager:
 
     @pytest.mark.asyncio
     async def test_close_disconnects_and_clears_client(self):
-        """Test that close() closes the Redis connection and clears the client."""
+        """Test that close() disconnects the pool and clears the client."""
         manager = CacheManager.get_instance()
-        mock_client = AsyncMock()
-        mock_client.close = AsyncMock()
-        manager._client = mock_client
+        mock_pool = AsyncMock()
+        mock_pool.disconnect = AsyncMock()
+        manager._pool = mock_pool
+        manager._client = AsyncMock()
 
         await manager.close()
 
-        mock_client.close.assert_called_once()
+        mock_pool.disconnect.assert_called_once()
+        assert manager._pool is None
         assert manager._client is None
 
     @pytest.mark.asyncio
@@ -323,155 +322,10 @@ class TestCacheManager:
         mock_settings.database.redis.password = ""
 
         with (
-            patch("app.core.cache.get_settings", return_value=mock_settings),
-            patch("app.core.cache.redis.Redis", return_value=mock_redis_client),
+            patch("src.common.cache.manager.get_settings", return_value=mock_settings),
+            patch("src.common.cache.manager.redis.Redis", return_value=mock_redis_client),
         ):
             client = await manager._ensure_client()
-
-        assert client is mock_redis_client
-        assert manager._client is mock_redis_client
-
-
-# ============================================================================
-# TestCacheManagerSync
-# ============================================================================
-
-
-class TestCacheManagerSync:
-    def setup_method(self):
-        """Reset singleton before each test."""
-        CacheManagerSync._instance = None
-        CacheManagerSync._client = None
-
-    def test_get_instance_singleton(self):
-        """Test that get_instance returns the same instance."""
-        mgr1 = CacheManagerSync.get_instance()
-        mgr2 = CacheManagerSync.get_instance()
-        assert mgr1 is mgr2
-
-    def test_get_set_delete(self):
-        """Test basic cache get/set/delete operations."""
-        manager = CacheManagerSync.get_instance()
-
-        mock_client = MagicMock()
-        mock_client.get = MagicMock(return_value=None)
-        mock_client.set = MagicMock()
-        mock_client.setex = MagicMock()
-        mock_client.delete = MagicMock()
-        manager._client = mock_client
-
-        # Test set
-        result = manager.set("test_key", {"value": "test"})
-        assert result is True
-        mock_client.set.assert_called_once()
-
-        # Test get returns None for no data
-        mock_client.get = MagicMock(return_value=None)
-        result = manager.get("test_key")
-        assert result is None
-
-        # Test delete
-        result = manager.delete("test_key")
-        assert result is True
-        mock_client.delete.assert_called_once_with("test_key")
-
-    def test_get_returns_deserialized_data(self):
-        """Test that get returns deserialized JSON data."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-
-        test_data = {"key": "value", "number": 42}
-        mock_client.get = MagicMock(return_value=json.dumps(test_data).encode())
-        manager._client = mock_client
-
-        result = manager.get("test_key")
-        assert result == test_data
-
-    def test_set_with_ttl(self):
-        """Test that set with TTL uses setex."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-        mock_client.setex = MagicMock()
-        manager._client = mock_client
-
-        manager.set("test_key", {"value": "test"}, ttl=300)
-
-        mock_client.setex.assert_called_once()
-        call_args = mock_client.setex.call_args
-        assert call_args[0][1] == 300  # TTL
-
-    def test_set_without_ttl(self):
-        """Test that set without TTL uses set (not setex)."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-        mock_client.set = MagicMock()
-        manager._client = mock_client
-
-        manager.set("test_key", {"value": "test"})
-
-        mock_client.set.assert_called_once()
-        mock_client.setex.assert_not_called()
-
-    def test_get_exception_returns_none(self):
-        """Test that get returns None when Redis raises an exception."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-        mock_client.get = MagicMock(side_effect=ConnectionError("redis down"))
-        manager._client = mock_client
-
-        result = manager.get("test_key")
-        assert result is None
-
-    def test_set_exception_returns_false(self):
-        """Test that set returns False when Redis raises an exception."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-        mock_client.set = MagicMock(side_effect=ConnectionError("redis down"))
-        manager._client = mock_client
-
-        result = manager.set("test_key", {"value": "test"})
-        assert result is False
-
-    def test_delete_exception_returns_false(self):
-        """Test that delete returns False when Redis raises an exception."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-        mock_client.delete = MagicMock(side_effect=ConnectionError("redis down"))
-        manager._client = mock_client
-
-        result = manager.delete("test_key")
-        assert result is False
-
-    def test_delete_nonexistent_key(self):
-        """Test deleting a key that does not exist (Redis delete is idempotent)."""
-        manager = CacheManagerSync.get_instance()
-        mock_client = MagicMock()
-        # Redis delete returns 0 for non-existent keys but does not raise
-        mock_client.delete = MagicMock(return_value=0)
-        manager._client = mock_client
-
-        result = manager.delete("nonexistent_key")
-        assert result is True
-        mock_client.delete.assert_called_once_with("nonexistent_key")
-
-    def test_ensure_client_creates_redis_client(self):
-        """Test that _ensure_client creates a Redis client when none exists."""
-        manager = CacheManagerSync.get_instance()
-        # Ensure _client is None so _ensure_client has to create it
-        manager._client = None
-
-        mock_redis_client = MagicMock()
-        mock_settings = MagicMock()
-        mock_settings.database.redis.host = "localhost"
-        mock_settings.database.redis.port = 6379
-        mock_settings.database.redis.db = 0
-        mock_settings.database.redis.password = ""
-
-        with (
-            patch("app.core.cache.get_settings", return_value=mock_settings),
-            patch("app.core.cache.redis.Redis", return_value=mock_redis_client),
-        ):
-            client = manager._ensure_client()
 
         assert client is mock_redis_client
         assert manager._client is mock_redis_client
@@ -521,7 +375,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=cached_value)
         mock_manager.set = AsyncMock()
 
-        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
+        with patch("src.common.cache.manager.CacheManager.get_instance", return_value=mock_manager):
             result = await expensive_function("test_query")
 
         assert result == cached_value
@@ -545,7 +399,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=None)  # cache miss
         mock_manager.set = AsyncMock()
 
-        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
+        with patch("src.common.cache.manager.CacheManager.get_instance", return_value=mock_manager):
             result = await expensive_function("test_query")
 
         assert result == expected_result
@@ -568,7 +422,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=None)  # cache miss
         mock_manager.set = AsyncMock()
 
-        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
+        with patch("src.common.cache.manager.CacheManager.get_instance", return_value=mock_manager):
             result = await returns_none("test_query")
 
         assert result is None
@@ -593,7 +447,7 @@ class TestCachedDecorator:
         mock_manager.get = AsyncMock(return_value=None)  # always miss
         mock_manager.set = AsyncMock()
 
-        with patch("app.core.cache.CacheManager.get_instance", return_value=mock_manager):
+        with patch("src.common.cache.manager.CacheManager.get_instance", return_value=mock_manager):
             _r1 = await func("query_a")
             _r2 = await func("query_b")
 

@@ -35,7 +35,7 @@ graph TB
 
 ## Query Type Detection
 
-**File**: [rag/retrieval/hybrid_retriever.py](../../rag/retrieval/hybrid_retriever.py)
+**File**: `src/query/retrieval/hybrid.py`
 
 The retriever analyzes query text to detect content-type intent:
 
@@ -71,7 +71,7 @@ Detected query types are used to boost results with matching `content_type`.
 
 ## Vector Retrieval
 
-**File**: [rag/retrieval/vector_retriever.py](../../rag/retrieval/vector_retriever.py)
+**File**: `src/query/retrieval/vector.py`
 
 **Model**: BAAI/bge-m3 (dimension: 1024, normalize: true)
 
@@ -109,7 +109,7 @@ Vector retrieval supports filtering by:
 
 ## BM25 Retrieval
 
-**File**: [rag/retrieval/bm25_retriever.py](../../rag/retrieval/bm25_retriever.py)
+**File**: `src/query/retrieval/bm25.py`
 
 **Tokenizer**: jieba (Chinese word segmentation)
 
@@ -188,7 +188,7 @@ This ensures tables appear first for table queries, lists first for drug queries
 
 ## Cross-Encoder Reranking
 
-**File**: [rag/reranker/cross_encoder.py](../../rag/reranker/cross_encoder.py)
+**File**: `src/query/reranker/cross_encoder.py`
 
 **Model**: BAAI/bge-reranker-v2-m3
 
@@ -214,7 +214,7 @@ GET /api/v1/documents/consistency-check
 POST /api/v1/documents/cleanup-orphans
 ```
 
-**File**: [app/services/consistency.py](../../app/services/consistency.py)
+**File**: `src/conversation/consistency.py`
 
 ### Deletion Order
 
@@ -242,7 +242,7 @@ class RetrievalConfig(BaseModel):
     similarity_threshold: float = 0.5
 ```
 
-**YAML Config** (`config/config.yaml`):
+**YAML Config** (`src/common/config/config.yaml`):
 ```yaml
 rag:
   retrieval:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from rag.evaluation.retrieval_eval import RetrievalEvaluator, RetrievalMetrics
+from src.evaluation.retrieval_eval import RetrievalEvaluator, RetrievalMetrics
 
 
 class TestRetrievalEvaluator:

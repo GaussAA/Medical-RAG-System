@@ -171,7 +171,7 @@ class DataConfig(BaseModel):
 
 ## YAML Config Example
 
-**File**: `config/config.yaml`
+**File**: `src/common/config/config.yaml`
 
 ```yaml
 app:

@@ -8,7 +8,7 @@
 
 ## Architecture Before FP16
 
-**File**: `app/core/gpu_memory_manager.py` (已删除)
+**File**: `src/gpu_memory_manager.py` (已删除)
 
 **Pattern**: Singleton
 
@@ -123,7 +123,7 @@ From [config/settings.py](../../config/settings.py):
 5. Reranker remains lazy-loaded
 ```
 
-**Code** ([app/core/rag_engine.py](../../app/core/rag_engine.py)):
+**Code** (`src/query/engine.py`):
 ```python
 async def process_document(self, nodes: list[RetrievedNode]) -> bool:
     # Step 1: Move reranker to CPU if on GPU

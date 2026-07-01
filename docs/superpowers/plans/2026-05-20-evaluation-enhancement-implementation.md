@@ -41,8 +41,8 @@ tests/evaluation/
 ### Task 1: 定义评估器 Protocol 接口
 
 **Files:**
-- Create: `rag/evaluation/interfaces.py`
-- Modify: `rag/evaluation/__init__.py`
+- Create: `src/evaluation/interfaces.py`
+- Modify: `src/evaluation/__init__.py`
 
 - [ ] **Step 1: 编写 Protocol 接口定义**
 
@@ -159,7 +159,7 @@ git commit -m "feat(evaluation): add Protocol interfaces for evaluator abstracti
 ### Task 2: 增强 BenchmarkRunner 支持混合模式
 
 **Files:**
-- Modify: `rag/evaluation/benchmark_runner.py`
+- Modify: `src/evaluation/benchmark_runner.py`
 - Create: `tests/evaluation/test_benchmark_runner.py`
 
 - [ ] **Step 1: 编写 BenchmarkRunner 混合模式测试**
@@ -329,7 +329,7 @@ git commit -m "feat(evaluation): add hybrid mode to BenchmarkRunner"
 ### Task 3: 完善 RAGEvaluator 评估逻辑
 
 **Files:**
-- Modify: `rag/evaluation/evaluator.py`
+- Modify: `src/evaluation/evaluator.py`
 
 - [ ] **Step 1: 编写 RAGEvaluator 集成测试**
 
@@ -400,7 +400,7 @@ git commit -m "test(evaluation): add RAGEvaluator integration tests"
 
 **Files:**
 - Create: `rag_cli.py`
-- Modify: `rag/evaluation/cli.py`
+- Modify: `src/evaluation/cli.py`
 
 - [ ] **Step 1: 创建统一 CLI 入口**
 
@@ -592,9 +592,9 @@ git commit -m "feat(cli): create unified rag_cli.py entry point"
 ### Task 5: 实现 HTMLReporter
 
 **Files:**
-- Create: `rag/evaluation/reporters/__init__.py`
-- Create: `rag/evaluation/reporters/html_reporter.py`
-- Create: `rag/evaluation/reporters/csv_reporter.py`
+- Create: `src/evaluation/reporters/__init__.py`
+- Create: `src/evaluation/reporters/html_reporter.py`
+- Create: `src/evaluation/reporters/csv_reporter.py`
 
 - [ ] **Step 1: 创建 reporters 模块初始化**
 
@@ -906,7 +906,7 @@ git commit -m "feat(evaluation): add HTML, CSV, JSON reporters with Plotly chart
 ### Task 6: 实现 DatasetManager
 
 **Files:**
-- Create: `rag/evaluation/dataset_manager.py`
+- Create: `src/evaluation/dataset_manager.py`
 - Create: `tests/evaluation/test_dataset_manager.py`
 
 - [ ] **Step 1: 编写 DatasetValidator**
@@ -1263,7 +1263,7 @@ git commit -m "feat(evaluation): add DatasetManager with CRUD and version manage
 ### Task 7: 实现 SyntheticDataGenerator
 
 **Files:**
-- Create: `rag/evaluation/synthetic_generator.py`
+- Create: `src/evaluation/synthetic_generator.py`
 
 - [ ] **Step 1: 实现合成数据生成器**
 

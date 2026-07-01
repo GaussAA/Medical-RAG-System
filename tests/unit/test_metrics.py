@@ -1,4 +1,4 @@
-from app.core.metrics import (
+from src.common.monitoring.metrics import (
     ACTIVE_QUERIES,
     ERROR_COUNT,
     GENERATION_LATENCY,

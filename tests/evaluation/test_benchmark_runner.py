@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import QueryResponse
-from rag.evaluation.benchmark_runner import (
+from src.common.models import QueryResponse
+from src.evaluation.benchmark_runner import (
     BenchmarkConfig,
     BenchmarkResult,
     BenchmarkRunner,
 )
-from rag.evaluation.evaluator import RAGEvaluationResult, RAGEvaluator
+from src.evaluation.evaluator import RAGEvaluationResult, RAGEvaluator
 
 
 @pytest.fixture

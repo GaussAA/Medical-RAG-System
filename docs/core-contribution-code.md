@@ -73,7 +73,7 @@ graph LR
 
 ## 2. 数据模型定义
 
-**文件**: `app/models/database.py`
+**文件**: `src/common/database/models`.py`
 
 ### 2.1 核心实体模型
 
@@ -194,7 +194,7 @@ class Message(Base):
 
 ### 2.2 Pydantic Schema定义
 
-**文件**: `app/models/schemas.py` (关键部分)
+**文件**: `src/common/models`.py` (关键部分)
 
 ```python
 from pydantic import BaseModel, Field
@@ -256,7 +256,7 @@ class Chunk(BaseModel):
 
 ## 3. 文档上传流程
 
-**文件**: `app/api/routes/documents.py`
+**文件**: `src/documents/api`.py`
 
 ### 3.1 单文档上传
 
@@ -340,7 +340,7 @@ async def process_document_background(doc_id: str, file_path: str, title: str | 
 
 ### 4.1 Markdown解析器
 
-**文件**: `rag/parser/markdown_parser.py`
+**文件**: `src/documents/parser/markdown_parser.py`
 
 ```python
 class MarkdownParser(BaseParser):
@@ -446,7 +446,7 @@ class MarkdownParser(BaseParser):
 
 ### 4.2 层级分块器
 
-**文件**: `rag/chunking/hierarchical_chunker.py`
+**文件**: `src/documents/chunker.py`
 
 ```python
 class HierarchicalChunker(BaseChunker):
@@ -607,7 +607,7 @@ class HierarchicalChunker(BaseChunker):
 
 ## 5. 批量处理与统一向量化
 
-**文件**: `app/api/routes/documents.py`
+**文件**: `src/documents/api`.py`
 
 ### 5.1 批量上传核心逻辑
 
@@ -767,7 +767,7 @@ async def process_batch_documents_background(
 
 ### 5.3 Embedding统一向量化实现
 
-**文件**: `app/core/rag_engine.py`
+**文件**: `src/rag_engine.py`
 
 ```python
 class RAGEngine:
@@ -823,7 +823,7 @@ class RAGEngine:
 
 ## 6. 混合检索与RRF融合
 
-**文件**: `rag/retrieval/hybrid_retriever.py`
+**文件**: `src/query/retrieval/hybrid.py`
 
 ### 6.1 混合检索器核心
 
@@ -994,7 +994,7 @@ class HybridRetriever:
 
 ## 7. 重排序器实现
 
-**文件**: `rag/reranker/cross_encoder.py`
+**文件**: `src/query/reranker/cross_encoder.py`
 
 ### 7.1 懒加载与GPU内存管理
 
@@ -1136,7 +1136,7 @@ class Reranker:
 
 ## 8. LLM生成与引用验证
 
-**文件**: `rag/generation/llm_generator.py`
+**文件**: `src/query/generation/generator.py`
 
 ### 8.1 LLM生成器
 
@@ -1277,7 +1277,7 @@ class LLMGenerator:
 
 ### 8.2 引用验证器
 
-**文件**: `app/services/citation_verifier.py`
+**文件**: `src/citation_verifier.py`
 
 ```python
 class CitationVerifier:
@@ -1350,7 +1350,7 @@ class CitationVerifier:
 
 ## 9. RAG引擎编排
 
-**文件**: `app/core/rag_engine.py`
+**文件**: `src/rag_engine.py`
 
 ### 9.1 完整查询流程编排
 
@@ -1569,7 +1569,7 @@ class RAGEngine:
 
 ## 10. 会话管理与上下文注入
 
-**文件**: `app/services/session.py`
+**文件**: `src/session.py`
 
 ### 10.1 会话管理器（懒加载 + 消息驱逐）
 
@@ -1788,7 +1788,7 @@ class SessionManager:
 
 ## 11. GPU内存管理
 
-**文件**: `app/core/gpu_memory_manager.py`
+**文件**: `src/gpu_memory_manager.py`
 
 ### 11.1 GPU内存管理器（核心贡献）
 
@@ -1871,7 +1871,7 @@ class GPUMemoryManager:
 
 **设计原则**: PostgreSQL是source of truth，删除必须按序执行
 
-**文件**: `app/services/document.py`
+**文件**: `src/document.py`
 
 ```python
 class DocumentService:
@@ -1963,7 +1963,7 @@ class DocumentService:
 
 ### 12.2 孤立数据清理
 
-**文件**: `app/services/consistency.py`
+**文件**: `src/consistency.py`
 
 ```python
 class ConsistencyChecker:
