@@ -8,13 +8,12 @@ venv/
 dist/
 build/
 
-# Python dev tools
-.pre-commit-config.yaml
+# Python dev tools (cache only, NOT config)
 .mypy_cache/
 .ruff_cache/
+.pytest_cache/
 
 # Test & Coverage
-.pytest_cache/
 .coverage
 .coverage*
 coverage.json
@@ -44,4 +43,3 @@ logs/
 # Tool Cache
 .claude/
 .omc/
-

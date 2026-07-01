@@ -86,6 +86,11 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
 [tool.ruff.lint]
 select = [
     "I",   # isort 导入排序
@@ -97,7 +102,7 @@ select = [
     "TID", # flake8-tidy-imports（禁止绕过 __init__.py 的内部导入）
 ]
 extend-ignore = [
-    "N802",  # 允许函数名含大写（Pydantic validators 需大写）
+    "N802",      # 允许函数名含大写（Pydantic validators 需大写）
 ]
 
 # ========== 模块边界约束：禁止绕过 __init__.py 导入内部模块 ==========

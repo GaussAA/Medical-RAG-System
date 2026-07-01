@@ -1,0 +1,16 @@
+# <type>: <简短描述>
+#
+# 类型 (Type):
+#   feat     — 新功能
+#   fix      — Bug 修复
+#   refactor — 重构（不新增功能也不修 Bug）
+#   docs     — 文档更新
+#   style    — 代码风格（格式化、缩进等）
+#   test     — 测试相关
+#   chore    — 构建/工具/依赖变更
+#
+# 示例:
+#   feat: 添加文档批量上传接口
+#   fix: 修复 Qdrant 连接超时问题
+#   refactor: 提取共享的 SafetyChecker 逻辑
+#   docs: 更新 API 文档中的分页说明
