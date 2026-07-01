@@ -33,10 +33,13 @@ class CacheManager:
     _instance: "CacheManager | None" = None
     _pool: redis.ConnectionPool | None = None
     _client: redis.Redis | None = None
+    _down: bool = False  # flag: once Redis fails, suppress retries for this process lifetime
 
     def __init__(self):
         self._pool = None
         self._client = None
+        self._client = None
+        self._down = False
 
     @classmethod
     def get_instance(cls) -> "CacheManager":
@@ -45,7 +48,13 @@ class CacheManager:
         return cls._instance
 
     async def _ensure_client(self) -> redis.Redis | None:
-        """Lazy-init a Redis client backed by a shared connection pool."""
+        """Lazy-init a Redis client backed by a shared connection pool.
+
+        Once a connection attempt fails, sets ``_down = True`` so subsequent
+        calls return immediately without retrying or logging warnings.
+        """
+        if self._down:
+            return None
         if self._client is not None:
             return self._client
         try:
@@ -69,6 +78,7 @@ class CacheManager:
             logger.warning(f"Redis unavailable, caching disabled: {e}")
             self._pool = None
             self._client = None
+            self._down = True  # 不再重试，直到进程重启
         return self._client
 
     async def get(self, key: str) -> Any | None:
