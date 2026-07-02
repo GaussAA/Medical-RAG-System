@@ -31,7 +31,7 @@ services:
 
   # ========== Qdrant 向量数据库 ==========
   qdrant:
-    image: qdrant/qdrant:v1.13.0
+    image: qdrant/qdrant:v1.18.2
     container_name: medical-rag-qdrant
     restart: unless-stopped
     ports:
@@ -39,7 +39,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      test: ["CMD", "pidof", "qdrant"]
       <<: *health-defaults
     networks:
       - medical-rag-net
