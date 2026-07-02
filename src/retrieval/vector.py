@@ -150,6 +150,7 @@ class VectorRetriever(BaseRetriever):
             payload = {
                 "content": node.content,
                 "node_id": node.node_id,
+                "chunk_id": node.metadata.get("chunk_id", node.node_id),
                 "doc_id": node.metadata.get("doc_id", ""),
                 "source_file": node.metadata.get("source_file", ""),
                 "heading_tree": node.metadata.get("heading_tree", {}),

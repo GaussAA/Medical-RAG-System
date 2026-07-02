@@ -47,8 +47,15 @@ async def check_qdrant() -> dict[str, Any]:
 
 
 async def check_redis() -> dict[str, Any]:
-    """Check Redis connectivity using async client."""
+    """Check Redis connectivity using the CacheManager instance."""
     try:
+        from src.common.cache import CacheManager
+
+        cache_mgr = CacheManager.get_instance()
+        alive = await cache_mgr.reconnect_now()
+        if alive:
+            return {"status": "healthy"}
+        # Fallback temp client for accurate diagnostic
         settings = get_settings()
         import redis.asyncio as redis
 
@@ -60,6 +67,23 @@ async def check_redis() -> dict[str, Any]:
         )
         await r.ping()  # type: ignore[misc]
         await r.aclose()
+        return {"status": "healthy"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+
+async def check_bm25() -> dict[str, Any]:
+    """Check BM25 index file is accessible and non-empty."""
+    try:
+        from pathlib import Path
+        from src.common.config import get_settings
+
+        path = Path(get_settings().rag.retrieval.bm25_persist_path)
+        if not path.exists():
+            return {"status": "degraded", "error": "BM25 index file not found (will be created on first document)"}
+        size = path.stat().st_size
+        if size == 0:
+            return {"status": "degraded", "error": "BM25 index file is empty"}
         return {"status": "healthy"}
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
@@ -77,14 +101,16 @@ async def health_check(check_dependencies: bool = False) -> HealthResponse:
         pg_status = await check_postgresql()
         qdrant_status = await check_qdrant()
         redis_status = await check_redis()
+        bm25_status = await check_bm25()
 
         response["dependencies"] = {
             "postgresql": DependencyStatus(**pg_status),
             "qdrant": DependencyStatus(**qdrant_status),
             "redis": DependencyStatus(**redis_status),
+            "bm25": DependencyStatus(**bm25_status),
         }
 
-        deps = [pg_status, qdrant_status, redis_status]
+        deps = [pg_status, qdrant_status, redis_status, bm25_status]
         if any(d["status"] == "unhealthy" for d in deps):
             response["status"] = "degraded"
 

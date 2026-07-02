@@ -2,9 +2,9 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from src.common.cache import CacheManager, cached, make_cache_key
 
 """TestMakeCacheKey"""
-from src.common.cache import CacheManager, cached, make_cache_key
 
 
 class TestMakeCacheKey:

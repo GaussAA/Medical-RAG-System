@@ -1,21 +1,14 @@
-fix(cache): 重构缓存层 — 熔断器重试 + TTL 抖动 + 可观测性
+feat(storage): 完善三重存储同步 — heading_tree/chunk_id/健康检查
 
-核心修复：
-- 将永久性 `_down` 旗标替换为三态熔断器（Closed/Open/Half-Open）
-- 30 秒冷却期后自动尝试重连，不再"一次失败终身禁用"
-- 每次调用前 `ping()` 检测存量连接，失效则自动重建
-- 新增 `reconnect_now()` 方法可主动触发重连
-
-性能增强：
-- `set()` 写入 TTL 自动施加 ±10% 随机 jitter，防缓存雪崩
+存储增强：
+- chunks 表新增 heading_tree JSON 列，PG 可独立还原层级上下文
+- Qdrant payload 新增 chunk_id 字段，支持 PG ↔ Qdrant JOIN
+- 数据模型文档同步更新（ER 图 + Qdrant payload 表）
 
 可观测性：
-- 新增 `rag_cache_hits_total` / `rages_misses_total` / `rag_cache_failures_total` Prometheus 指标
-- 熔断器状态变更发射结构化日志（event="cache_circuit_state"）
+- /api/v1/health?check_dependencies 新增 bm25 健康检查
+- Redis 健康检查改用 CacheManager.reconnect_now()，与熔断器状态一致
 
-代码整洁：
-- 移除 `__init__` 中 `self._client = None` 重复赋值（第 40-41 行）
-- 更新单元测试适配 TTL jitter（assert [270, 330] 区间）
-
-其他：
-- docker-compose.yml: qdrant/whodb 版本标签更新
+文档更新：
+- 架构图补充 Redis（虚线表示缓存路径，不参与同步）
+- 同步规则增加 Redis 不参与删除同步的说明及理由

@@ -149,6 +149,7 @@ class DocumentStore:
                     position=i,
                     content_type=chunk.metadata.content_type,
                     section_title=chunk.metadata.section_title,
+                    heading_tree=chunk.metadata.heading_tree,
                 )
                 session.add(chunk_record)
             await session.commit()

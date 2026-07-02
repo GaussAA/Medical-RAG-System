@@ -28,9 +28,10 @@ graph TB
     end
 
     subgraph Storage[Data Storage]
-        PG[(PostgreSQL)]
-        QD[(Qdrant)]
-        BM25[(BM25 Index)]
+        PG[(PostgreSQL<br/>Source of Truth)]
+        QD[(Qdrant<br/>Vector Search)]
+        BM25[(BM25<br/>Keyword Index)]
+        RC[(Redis<br/>Cache)]
     end
 
     Streamlit --> API
@@ -51,8 +52,10 @@ graph TB
 
     HR --> QD
     HR --> BM25
+    HR -.->|cache| RC
     DOC --> PG
     SESSION --> PG
+    SESSION -.->|cache| RC
 ```
 
 ## Component Responsibilities
@@ -100,19 +103,29 @@ graph LR
 
 ## Data Storage Architecture
 
-### Three Independent Stores
+### Storage Layers
 
-| Store      | Purpose                            | Persistence                               | Key Operation     |
-| ---------- | ---------------------------------- | ----------------------------------------- | ----------------- |
-| PostgreSQL | Document records, chunks, sessions | Permanent                                 | Source of truth   |
-| Qdrant     | Vector embeddings                  | Permanent                                 | Similarity search |
-| BM25       | Keyword search index               | File-based (`data/cache/bm25_index.json`) | Keyword search    |
+| Store      | Purpose                            | Persistence                               | Role                |
+| ---------- | ---------------------------------- | ----------------------------------------- | ------------------- |
+| PostgreSQL | Document records, chunks, sessions | Permanent                                 | Source of truth     |
+| Qdrant     | Vector embeddings                  | Permanent                                 | Similarity search   |
+| BM25       | Keyword search index               | File-based (`data/cache/bm25_index.json`) | Keyword search      |
+| Redis      | Query result + session cache       | AOF (`data/database/redis_data/`)         | Performance cache   |
 
 ### Synchronization Rules
 
 1. **Document Deletion Order**: PostgreSQL first → Qdrant → BM25
 2. If PostgreSQL fails → abort deletion
 3. If Qdrant/BM25 fail → log inconsistency, use `/cleanup-orphans` to repair
+4. **Redis** is NOT part of the delete sync — query result cache keys (`cache:retrieval:<md5>`) cannot be reverse-indexed to document ID. TTL (300s) ensures stale results expire quickly.
+
+### Health Check Dependencies
+
+`GET /api/v1/health?check_dependencies=true` reports status for all four stores:
+- `postgresql` — SQL connection test
+- `qdrant` — Qdrant client connectivity
+- `redis` — CacheManager circuit breaker + ping
+- `bm25` — Index file existence and non-empty check
 
 ## Session & Message Persistence
 
@@ -120,7 +133,8 @@ graph LR
 ┌─────────────────────────────────────────────────────────────┐
 │ SessionManager                                              │
 │  ├─ Memory Cache (dict) ─────────── Fast read/write         │
-│  └─ PostgreSQL (source of truth) ─ Durability              │
+│  ├─ Redis Cache (TTL=3600s) ───────跨进程共享              │
+│  └─ PostgreSQL (source of truth) ── Durability              │
 └─────────────────────────────────────────────────────────────┘
 ```
 

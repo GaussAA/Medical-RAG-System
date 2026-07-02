@@ -62,6 +62,7 @@ class Chunk(Base):
     position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     section_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    heading_tree: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     vector_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
     extra_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

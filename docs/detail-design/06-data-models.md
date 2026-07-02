@@ -43,6 +43,7 @@ erDiagram
         int position
         string content_type "text|table|list"
         string section_title
+        json heading_tree "heading path: {1:'H1', 2:'H2', ...}"
         string vector_id
         datetime created_at
         json extra_data
@@ -256,6 +257,7 @@ payload = {
     "doc_id": doc_id,
     "doc_title": document.title,
     "node_id": node.node_id,
+    "chunk_id": chunk.chunk_id,               # FK to PostgreSQL chunks.id
     "content": node.content,
     "heading_id": chunk.heading_id,           # FK to Heading table
     "heading_tree": chunk.metadata.heading_tree,  # {1: "H1", 2: "H2", 3: "H3"}
