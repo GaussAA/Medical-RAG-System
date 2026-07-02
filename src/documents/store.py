@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from loguru import logger
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.database import get_session_factory
@@ -136,22 +136,26 @@ class DocumentStore:
             raise
 
     async def save_chunks(self, doc_id: str, chunks: list, heading_ids: dict[int, str] | None = None) -> None:
-        """Persist chunks to PostgreSQL with optional heading associations."""
+        """Persist chunks to PostgreSQL with optional heading associations.
+
+        Uses bulk insert for performance.
+        """
         session = await self._ensure_session()
         try:
+            values = []
             for i, chunk in enumerate(chunks):
-                chunk_record = DBChunk(
-                    id=uuid.UUID(chunk.chunk_id),
-                    doc_id=uuid.UUID(doc_id),
-                    heading_id=uuid.UUID(heading_ids.get(i)) if heading_ids and heading_ids.get(i) else None,
-                    content=chunk.content,
-                    char_count=chunk.metadata.char_count,
-                    position=i,
-                    content_type=chunk.metadata.content_type,
-                    section_title=chunk.metadata.section_title,
-                    heading_tree=chunk.metadata.heading_tree,
-                )
-                session.add(chunk_record)
+                values.append({
+                    "id": uuid.UUID(chunk.chunk_id),
+                    "doc_id": uuid.UUID(doc_id),
+                    "heading_id": uuid.UUID(heading_ids.get(i)) if heading_ids and heading_ids.get(i) else None,
+                    "content": chunk.content,
+                    "char_count": chunk.metadata.char_count,
+                    "position": i,
+                    "content_type": chunk.metadata.content_type,
+                    "section_title": chunk.metadata.section_title,
+                    "heading_tree": chunk.metadata.heading_tree,
+                })
+            await session.execute(insert(DBChunk), values)
             await session.commit()
             logger.info(f"Persisted {len(chunks)} chunks to PostgreSQL")
         except Exception as e:

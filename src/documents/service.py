@@ -233,22 +233,21 @@ class DocumentService:
         """
         doc = self.documents.get(doc_id)
         if not doc:
-            logger.warning(f"delete_document: doc {doc_id} not found in documents")
-            return False
-
-        logger.info(f"delete_document: found doc {doc_id} with total_chunks={doc.get('total_chunks')}")
-
-        # Handle None total_chunks - try to get from database or use 0
-        total_chunks = doc.get("total_chunks")
-        if total_chunks is None:
-            # Try to get from database
+            # Fallback: load from database if not in memory
+            try:
+                uuid.UUID(doc_id)
+            except ValueError:
+                logger.warning(f"delete_document: invalid doc_id {doc_id}")
+                return False
             db_doc = await self.store.get_document(doc_id)
-            if db_doc and db_doc.total_chunks:
-                total_chunks = db_doc.total_chunks
-                logger.info(f"Retrieved total_chunks={total_chunks} from database")
-            else:
-                total_chunks = 0
-                logger.warning(f"total_chunks is None for doc {doc_id}, using 0")
+            if not db_doc:
+                logger.warning(f"delete_document: doc {doc_id} not found in memory or database")
+                return False
+            total_chunks = db_doc.total_chunks or 0
+            logger.info(f"delete_document: loaded doc {doc_id} from DB, total_chunks={total_chunks}")
+        else:
+            total_chunks = doc.get("total_chunks", 0)
+            logger.info(f"delete_document: found doc {doc_id} in memory with total_chunks={total_chunks}")
 
         # STEP 1: Delete from PostgreSQL first (source of truth)
         pg_success = await self.store.delete_document(doc_id)

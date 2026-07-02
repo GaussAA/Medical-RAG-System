@@ -50,6 +50,7 @@ class Chunk(Base):
         UUID(as_uuid=True),
         ForeignKey("documents.documents.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     heading_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -80,6 +81,7 @@ class Heading(Base):
         UUID(as_uuid=True),
         ForeignKey("documents.documents.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("documents.headings.id", ondelete="CASCADE"), nullable=True
