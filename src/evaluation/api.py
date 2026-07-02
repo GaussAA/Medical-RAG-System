@@ -8,11 +8,11 @@ from fastapi import APIRouter, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from src.common.di import RAGEngineDep
+from src.common.di import RAGAgentDep
 from src.common.models import QueryRequest
 from src.documents import DocumentStore
 from src.evaluation.evaluator import EvalGroundTruth, RAGEvaluationResult, RAGEvaluator
-from src.query.generation import LLMGenerator
+from src.generation import LLMGenerator
 
 router = APIRouter(prefix="/api/v1/evaluation", tags=["evaluation"])
 
@@ -166,7 +166,7 @@ def _load_history_from_disk() -> list[RAGEvaluationResult]:
 
 
 @router.post("/evaluate")
-async def evaluate(request: Request, eval_request: EvaluateRequest, rag_engine: RAGEngineDep) -> dict:
+async def evaluate(request: Request, eval_request: EvaluateRequest, rag_engine: RAGAgentDep) -> dict:
     """Run single query evaluation."""
     # Build query request
     query_req = QueryRequest(
@@ -206,7 +206,7 @@ async def evaluate(request: Request, eval_request: EvaluateRequest, rag_engine: 
 
 async def _process_single_benchmark_item(
     item: dict,
-    rag_engine: RAGEngineDep,
+    rag_engine: RAGAgentDep,
     session_manager,
 ) -> RAGEvaluationResult | None:
     """Process a single benchmark item with timeout."""
@@ -254,7 +254,7 @@ async def _process_single_benchmark_item(
 
 
 @router.post("/benchmark")
-async def benchmark(request: Request, benchmark_request: BenchmarkRequest, rag_engine: RAGEngineDep) -> dict:
+async def benchmark(request: Request, benchmark_request: BenchmarkRequest, rag_engine: RAGAgentDep) -> dict:
     """Run benchmark from dataset with concurrent processing."""
     session_manager = request.app.state.container.session_manager
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_BENCHMARK)

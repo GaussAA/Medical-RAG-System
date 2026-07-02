@@ -1,4 +1,4 @@
-from src.query.confidence import ConfidenceEvaluator
+from src.agent.confidence import ConfidenceEvaluator
 from src.common.models import RetrievedNode
 
 

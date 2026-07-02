@@ -1,4 +1,5 @@
 """BM25 retriever — keyword-based retrieval with jieba tokenization and disk persistence."""
+
 import asyncio
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ from loguru import logger
 from rank_bm25 import BM25Plus  # type: ignore[import-untyped]
 
 from src.common.models import RetrievedNode
-from src.query.retrieval.base import BaseRetriever
+from src.retrieval.base import BaseRetriever
 
 
 class BM25Retriever(BaseRetriever):

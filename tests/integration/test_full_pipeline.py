@@ -2,9 +2,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from app.main import create_app
 from httpx import ASGITransport, AsyncClient
 
-from app.main import create_app
 from src.common.models import (
     Citation,
     ConversationSession,
@@ -79,7 +79,7 @@ async def test_full_query_pipeline(client):
     assert doc_response.status_code == 200
 
     # Mock query response
-    with patch("src.query.engine.RAGEngine.query", new_callable=AsyncMock) as mock_query:
+    with patch("src.agent.rag_agent.RAGAgent.query", new_callable=AsyncMock) as mock_query:
         mock_query.return_value = QueryResponse(
             answer="Test answer",
             confidence=0.9,
@@ -118,7 +118,7 @@ async def test_query_with_citations(client):
         )
     ]
 
-    with patch("src.query.engine.RAGEngine.query", new_callable=AsyncMock) as mock_query:
+    with patch("src.agent.rag_agent.RAGAgent.query", new_callable=AsyncMock) as mock_query:
         mock_query.return_value = QueryResponse(
             answer="Based on the document, medical content is important.",
             confidence=0.85,
@@ -150,7 +150,7 @@ async def test_query_with_warnings(client):
         )
     ]
 
-    with patch("src.query.engine.RAGEngine.query", new_callable=AsyncMock) as mock_query:
+    with patch("src.agent.rag_agent.RAGAgent.query", new_callable=AsyncMock) as mock_query:
         mock_query.return_value = QueryResponse(
             answer="Some medication-related answer.",
             confidence=0.75,

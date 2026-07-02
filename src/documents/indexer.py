@@ -1,13 +1,12 @@
 """Retrieval indexer — synchronizes documents to vector and BM25 indexes."""
+
 import uuid as uuid_lib
 from typing import Any
 
 from loguru import logger
 
-from src.query import HybridRetrieverPort
-
 # ponytail: concrete import for fallback only; DI path uses HybridRetrieverPort
-from src.query.retrieval import HybridRetriever
+from src.retrieval import HybridRetriever, HybridRetrieverPort
 
 
 class RetrievalIndexer:

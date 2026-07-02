@@ -4,7 +4,7 @@ from src.common.di.container import Container, create_container
 from src.common.di.deps import (
     APIKeyDep,
     DocumentServiceDep,
-    RAGEngineDep,
+    RAGAgentDep,
     SafetyCheckerDep,
     SessionManagerDep,
     limiter,
@@ -13,7 +13,7 @@ from src.common.di.deps import (
 __all__ = [
     "Container",
     "create_container",
-    "RAGEngineDep",
+    "RAGAgentDep",
     "DocumentServiceDep",
     "SessionManagerDep",
     "SafetyCheckerDep",

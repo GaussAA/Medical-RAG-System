@@ -1,4 +1,5 @@
 """LLM generator — async OpenAI client with retry, streaming, and caching."""
+
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -10,11 +11,11 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.common.cache.manager import CacheManager, make_cache_key
-from src.common.config.settings import get_settings
+from src.common.cache import CacheManager, make_cache_key
+from src.common.config import get_settings
 from src.common.models import RetrievedNode
-from src.query.citation.verifier import CitationVerifier
-from src.query.generation.prompt_builder import PromptBuilder
+from src.generation.citation.verifier import CitationVerifier
+from src.generation.prompt_builder import PromptBuilder
 
 
 class LLMGenerator:

@@ -12,13 +12,13 @@ from fastapi import Depends, Header, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from src.agent.confidence import ConfidenceEvaluator
+from src.agent.rag_agent import RAGAgent
 from src.common.cache import CacheManager
 from src.common.config.settings import Settings
 from src.common.safety import SafetyChecker
 from src.conversation.manager import SessionManager
 from src.documents.service import DocumentService
-from src.query.confidence import ConfidenceEvaluator
-from src.query.engine import RAGEngine
 
 # Shared rate limiter instance
 limiter = Limiter(key_func=get_remote_address)
@@ -32,11 +32,11 @@ def get_container(request: Request):
     return container
 
 
-async def get_rag_engine(request: Request) -> RAGEngine:
-    """FastAPI dependency: get RAGEngine from container."""
+async def get_rag_engine(request: Request) -> RAGAgent:
+    """FastAPI dependency: get RAGAgent from container."""
     container = get_container(request)
     if container.rag_engine is None:
-        raise RuntimeError("RAGEngine not initialized in container.")
+        raise RuntimeError("RAGAgent not initialized in container.")
     return container.rag_engine
 
 
@@ -97,7 +97,7 @@ async def verify_api_key(x_api_key: str = Header(None)) -> str:
 
 
 # Type aliases for FastAPI dependency injection
-RAGEngineDep = Annotated[RAGEngine, Depends(get_rag_engine)]
+RAGAgentDep = Annotated[RAGAgent, Depends(get_rag_engine)]
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 SessionManagerDep = Annotated[SessionManager, Depends(get_session_manager)]
 SafetyCheckerDep = Annotated[SafetyChecker, Depends(get_safety_checker)]

@@ -1,4 +1,5 @@
 """Warning generator — produces risk warnings for medication, diagnosis, emergency, etc."""
+
 from src.common.models import RetrievedNode, RiskWarning
 
 

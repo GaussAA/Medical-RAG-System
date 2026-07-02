@@ -161,7 +161,7 @@ class BenchmarkRunner:
             dataset_path: Path to dataset JSON file.
             queries_data: Alternative to dataset_path - list of query dicts.
             sample_size: Optional limit on number of queries to evaluate.
-            rag_engine: Optional RAGEngine instance. If provided, queries will
+            rag_engine: Optional RAGAgent instance. If provided, queries will
                        be executed against it for end-to-end evaluation.
 
         Returns:

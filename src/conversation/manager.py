@@ -1,4 +1,5 @@
 """Session manager — multi-turn conversation context with Redis cache and PostgreSQL persistence."""
+
 import uuid
 from datetime import UTC, datetime
 
@@ -7,10 +8,11 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.cache import CacheManager
-from src.common.database import Conversation, Message, get_session_factory
+from src.common.database import get_session_factory
 from src.common.models import ConversationSession
 from src.common.models import Message as MessageSchema
-from src.query.generation import format_history_message
+from src.conversation.models import Conversation, Message
+from src.generation import format_history_message
 
 SESSION_CACHE_PREFIX = "session"
 SESSION_CACHE_TTL = 3600  # 1 hour

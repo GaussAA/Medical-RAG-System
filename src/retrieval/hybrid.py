@@ -1,15 +1,16 @@
 """Hybrid retriever — combines vector similarity and BM25 keyword search with RRF fusion."""
+
 import asyncio
 from typing import Any
 
 from loguru import logger
 
-from src.common.cache.manager import CacheManager, make_cache_key
-from src.common.config.settings import get_settings
+from src.common.cache import CacheManager, make_cache_key
+from src.common.config import get_settings
 from src.common.models import RetrievedNode
-from src.query.retrieval.bm25 import BM25Retriever
-from src.query.retrieval.boosting import QueryBoosting
-from src.query.retrieval.vector import VectorRetriever
+from src.retrieval.bm25 import BM25Retriever
+from src.retrieval.boosting import QueryBoosting
+from src.retrieval.vector import VectorRetriever
 
 
 class HybridRetriever:

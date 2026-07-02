@@ -1,4 +1,4 @@
-from src.query.generation.prompt import (
+from src.generation.prompt import (
     SYSTEM_PROMPT,
     _sanitize_content,
     build_system_prompt,

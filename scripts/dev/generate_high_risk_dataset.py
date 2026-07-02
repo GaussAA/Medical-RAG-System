@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
-\"\"\"Generate high-risk eval dataset (~60 entries), new scenarios.\"\"\"
-import json, os
+"""Generate high-risk eval dataset (~60 entries), new scenarios."""
+
+import json
 
 # Read existing to extract exact doc ID strings
 entries_path = "data/evaluation/evaluation_dataset.jsonl"

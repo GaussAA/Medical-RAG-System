@@ -17,6 +17,7 @@ from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from src.agent import api as agent_api
 from src.common import api as health_api
 from src.common.config import get_settings
 from src.common.di import create_container
@@ -27,7 +28,6 @@ from src.conversation import api as conversation_api
 # Route imports (from new vertical slices)
 from src.documents import api as documents_api
 from src.evaluation import api as evaluation_api
-from src.query import api as query_api
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
             if not all(status.values()):
                 logger.warning("Some models failed to load, system may have reduced functionality")
         else:
-            logger.warning("RAGEngine not initialized, skipping model warmup")
+            logger.warning("RAGAgent not initialized, skipping model warmup")
     except Exception as e:
         logger.error(f"Model warmup failed: {e}")
 
@@ -113,7 +113,7 @@ def create_app() -> FastAPI:
         return RedirectResponse(url="/docs")
 
     # Register routes from vertical slices
-    app.include_router(query_api.router)
+    app.include_router(agent_api.router)
     app.include_router(documents_api.router)
     app.include_router(conversation_api.router)
     app.include_router(evaluation_api.router)

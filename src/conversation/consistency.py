@@ -4,14 +4,15 @@ from typing import Any
 from loguru import logger
 
 from src.common.config.settings import get_settings
-from src.common.database import Document, get_session_factory
+from src.common.database import get_session_factory
 from src.common.models import (
     ConsistencyCheckItem,
     ConsistencyCheckResponse,
     OrphanCleanupResponse,
 )
+from src.documents.models import Document
 from src.documents.store import DocumentStore
-from src.query.retrieval import HybridRetriever
+from src.retrieval import HybridRetriever
 
 
 class ConsistencyChecker:

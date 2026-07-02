@@ -1,4 +1,5 @@
 """Confidence evaluation — scores answer completeness and context relevance."""
+
 from dataclasses import dataclass, field
 from typing import Any
 

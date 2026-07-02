@@ -1,4 +1,5 @@
 """RAG engine — query orchestration: safety check, retrieval, rerank, generation, confidence."""
+
 import asyncio
 import time
 from collections.abc import AsyncGenerator
@@ -7,7 +8,8 @@ from typing import Any
 import torch
 from loguru import logger
 
-from src.common.config.settings import get_settings
+from src.agent.confidence import ConfidenceEvaluator
+from src.common.config import get_settings
 from src.common.logging import request_id_var
 from src.common.models import (
     QueryRequest,
@@ -29,14 +31,13 @@ from src.common.monitoring import (
 # ponytail: concrete fallbacks for DI; import via interfaces in production
 from src.common.safety import SafetyChecker, SafetyCheckPort
 from src.conversation import SessionManagerPort
-from src.query.citation import CitationVerifier
-from src.query.confidence import ConfidenceEvaluator
-from src.query.generation import FALLBACK_RESPONSES, LLMGenerator, WarningsGenerator
-from src.query.reranker import Reranker
-from src.query.retrieval import HybridRetriever
+from src.generation import FALLBACK_RESPONSES, LLMGenerator, WarningsGenerator
+from src.generation.citation import CitationVerifier
+from src.retrieval import HybridRetriever
+from src.retrieval.reranker import Reranker
 
 
-class RAGEngine:
+class RAGAgent:
     def __init__(
         self,
         safety_checker: SafetyCheckPort | None = None,
@@ -174,9 +175,7 @@ class RAGEngine:
                 conversation_history = self._build_conversation_history(session)
 
             try:
-                reranked_nodes = await self._retrieve_and_rerank(
-                    sanitized_query, request.filters, conversation_history
-                )
+                reranked_nodes = await self._retrieve_and_rerank(sanitized_query, request.filters, conversation_history)
             except Exception as e:
                 logger.error(f"Retrieval/rerank error: {e}")
                 ERROR_COUNT.labels(error_type="retrieval").inc()
@@ -324,9 +323,7 @@ class RAGEngine:
             # Stage 2: Retrieval & Rerank (with expanded query from history)
             t0 = time.time()
             try:
-                reranked_nodes = await self._retrieve_and_rerank(
-                    sanitized_query, request.filters, conversation_history
-                )
+                reranked_nodes = await self._retrieve_and_rerank(sanitized_query, request.filters, conversation_history)
             except Exception as e:
                 logger.error(f"Retrieval/rerank error: {e}")
                 ERROR_COUNT.labels(error_type="retrieval").inc()
@@ -495,8 +492,7 @@ class RAGEngine:
         )
         retrieval_elapsed = time.time() - t0
         logger.info(
-            f"  [_retrieve_and_rerank] vector+bm25 search: {retrieval_elapsed:.3f}s, "
-            f"got {len(retrieved_nodes)} nodes"
+            f"  [_retrieve_and_rerank] vector+bm25 search: {retrieval_elapsed:.3f}s, got {len(retrieved_nodes)} nodes"
         )
 
         if not retrieved_nodes:
@@ -511,10 +507,7 @@ class RAGEngine:
             candidates=retrieved_nodes[: self.config.retrieval.final_top_k * 2],
         )
         rerank_elapsed = time.time() - t1
-        logger.info(
-            f"  [_retrieve_and_rerank] rerank: {rerank_elapsed:.3f}s, "
-            f"got {len(reranked_nodes)} nodes"
-        )
+        logger.info(f"  [_retrieve_and_rerank] rerank: {rerank_elapsed:.3f}s, got {len(reranked_nodes)} nodes")
 
         RETRIEVAL_LATENCY.observe(retrieval_elapsed)
         RERANK_LATENCY.observe(rerank_elapsed)

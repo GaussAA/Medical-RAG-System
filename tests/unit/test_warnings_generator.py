@@ -1,5 +1,5 @@
 # tests/unit/test_warnings_generator.py
-from src.query.generation.warnings import WarningsGenerator
+from src.generation.warnings import WarningsGenerator
 
 
 def test_general_warning_always_added():

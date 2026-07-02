@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.common.models import RetrievedNode
-from src.query.retrieval.hybrid import HybridRetriever
+from src.retrieval.hybrid import HybridRetriever
 
 
 class TestHybridRetrieverQueryDetection:
@@ -98,7 +98,7 @@ class TestHybridRetrieverRRF:
     """Test HybridRetriever reciprocal rank fusion."""
 
     def setup_method(self):
-        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
+        with patch("src.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -169,7 +169,7 @@ class TestHybridRetrieverParallelSearch:
     """Test HybridRetriever parallel search."""
 
     def setup_method(self):
-        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
+        with patch("src.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -247,7 +247,7 @@ class TestHybridRetrieverSearch:
     """Test HybridRetriever search method."""
 
     def setup_method(self):
-        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
+        with patch("src.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -346,7 +346,7 @@ class TestHybridRetrieverAddDocuments:
     """Test HybridRetriever add_documents."""
 
     def setup_method(self):
-        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
+        with patch("src.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -391,7 +391,7 @@ class TestHybridRetrieverDeleteDocuments:
     """Test HybridRetriever delete_documents."""
 
     def setup_method(self):
-        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
+        with patch("src.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -431,7 +431,7 @@ class TestHybridRetrieverDeleteDocumentsAtomic:
     """Test HybridRetriever delete_documents_atomic."""
 
     def setup_method(self):
-        with patch("src.query.retrieval.hybrid.get_settings") as mock_settings:
+        with patch("src.retrieval.hybrid.get_settings") as mock_settings:
             mock_settings.return_value.rag.retrieval.bm25_persist_path = "bm25_test.json"
             mock_settings.return_value.rag.retrieval.weights = {
                 "vector": 0.6,
@@ -505,7 +505,7 @@ class TestBM25RetrieverFilters:
     """Test BM25Retriever filter support."""
 
     def setup_method(self):
-        from src.query.retrieval.bm25 import BM25Retriever
+        from src.retrieval.bm25 import BM25Retriever
 
         self.retriever = BM25Retriever()
 

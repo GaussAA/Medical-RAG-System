@@ -191,7 +191,7 @@ class RAGEvaluator:
 
     def _extract_contexts(self, response: QueryResponse) -> list[str]:
         """Extract context strings from response metadata or citations."""
-        # Priority 1: retrieved_contents from metadata (set by RAGEngine for evaluation)
+        # Priority 1: retrieved_contents from metadata (set by RAGAgent for evaluation)
         if response.metadata and response.metadata.get("retrieved_contents"):
             return list(response.metadata["retrieved_contents"])
 

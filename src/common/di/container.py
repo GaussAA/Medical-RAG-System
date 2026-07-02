@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.agent.confidence import ConfidenceEvaluator
+from src.agent.rag_agent import RAGAgent
 from src.common.cache import CacheManager
 from src.common.config.settings import Settings, get_settings
 from src.common.database import (
@@ -24,8 +26,6 @@ from src.documents.indexer import RetrievalIndexer
 from src.documents.processor import DocumentProcessor
 from src.documents.service import DocumentService
 from src.documents.store import DocumentStore
-from src.query.confidence import ConfidenceEvaluator
-from src.query.engine import RAGEngine
 
 
 @dataclass
@@ -40,7 +40,7 @@ class Container:
     cache: CacheManager = field(default_factory=CacheManager.get_instance)
     db_session_factory: Callable[[], AsyncSession] | None = None
     document_service: DocumentService | None = None
-    rag_engine: RAGEngine | None = None
+    rag_engine: RAGAgent | None = None
     session_manager: SessionManager | None = None
     safety_checker: SafetyChecker | None = None
     confidence_evaluator: ConfidenceEvaluator | None = None
@@ -84,11 +84,11 @@ async def create_container() -> Container:
     confidence_evaluator = ConfidenceEvaluator()
     session = factory()
 
-    # 5. Build session manager (needed by RAGEngine)
+    # 5. Build session manager (needed by RAGAgent)
     session_manager = SessionManager(async_session=session, cache_manager=cache)
 
     # 6. Build RAG engine with injected dependencies
-    rag_engine = RAGEngine(
+    rag_engine = RAGAgent(
         safety_checker=safety_checker,
         session_manager=session_manager,
     )

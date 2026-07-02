@@ -9,10 +9,6 @@ from typing import Any, Protocol
 
 from src.common.models import Message
 
-# Concrete implementations (also exported for DI container and direct use)
-from src.conversation.consistency import ConsistencyChecker
-from src.conversation.manager import SessionManager
-
 
 class SessionManagerPort(Protocol):
     """What conversation provides to query and other modules."""
@@ -41,8 +37,10 @@ class ConsistencyCheckerPort(Protocol):
 
 
 __all__ = [
-    "SessionManager",
-    "ConsistencyChecker",
     "SessionManagerPort",
     "ConsistencyCheckerPort",
 ]
+
+# Concrete implementations (re-exported for convenience: DI, docs/api, pre-commit TID251)
+from src.conversation.consistency import ConsistencyChecker  # noqa: E402, F401
+from src.conversation.manager import SessionManager  # noqa: E402, F401

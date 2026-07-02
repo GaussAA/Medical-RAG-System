@@ -1,16 +1,16 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.common.monitoring.metrics import ERROR_COUNT
-from src.query.engine import RAGEngine
+from src.agent.rag_agent import RAGAgent
 from src.common.models import QueryRequest, SafetyResult
+from src.common.monitoring import ERROR_COUNT
 
 
-class TestRAGEngineErrorClassification:
-    """Test fine-grained error_type classification in RAGEngine.query()"""
+class TestRAGAgentErrorClassification:
+    """Test fine-grained error_type classification in RAGAgent.query()"""
 
     def setup_method(self):
         """Reset RAG engine before each test."""
-        self.engine = RAGEngine()
+        self.engine = RAGAgent()
 
     def _create_query_request(self, question="测试问题", session_id="test-session"):
         return QueryRequest(question=question, session_id=session_id)

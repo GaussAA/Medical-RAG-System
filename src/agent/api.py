@@ -1,4 +1,5 @@
 """Query API routes — streaming and synchronous RAG query endpoints."""
+
 import json
 import uuid
 
@@ -6,10 +7,10 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from src.common.di import APIKeyDep, RAGEngineDep, limiter
+from src.common.di import APIKeyDep, RAGAgentDep, limiter
 from src.common.models import QueryRequest, QueryResponse, RiskWarning
 
-router = APIRouter(prefix="/api/v1", tags=["query"])
+router = APIRouter(prefix="/api/v1", tags=["agent"])
 
 # ponytail: question length validation / truncation handled by Pydantic field_validator
 
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/api/v1", tags=["query"])
 async def query(
     request: Request,
     request_data: QueryRequest,
-    rag_engine: RAGEngineDep,
+    rag_engine: RAGAgentDep,
     api_key: APIKeyDep,
 ) -> QueryResponse:
     # Generate trace_id if not provided, for request correlation
@@ -62,7 +63,7 @@ async def query(
 async def query_stream(
     request: Request,
     request_data: QueryRequest,
-    rag_engine: RAGEngineDep,
+    rag_engine: RAGAgentDep,
 ) -> StreamingResponse:
     trace_id = request_data.trace_id or str(uuid.uuid4())
 

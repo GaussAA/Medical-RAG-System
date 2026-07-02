@@ -4,7 +4,7 @@ import tempfile
 import pytest
 
 from src.common.models import RetrievedNode
-from src.query.retrieval.bm25 import BM25Retriever
+from src.retrieval.bm25 import BM25Retriever
 
 
 class TestBM25Retriever:
@@ -61,7 +61,7 @@ class TestBM25Retriever:
 class TestHybridRetriever:
     @pytest.mark.asyncio
     async def test_hybrid_retriever_initialization(self):
-        from src.query.retrieval.hybrid import HybridRetriever
+        from src.retrieval.hybrid import HybridRetriever
 
         retriever = HybridRetriever()
         assert retriever is not None

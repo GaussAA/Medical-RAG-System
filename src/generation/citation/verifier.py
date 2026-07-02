@@ -260,7 +260,7 @@ class CitationVerifier:
                 document_id=ctx.get("node_id"),
                 file_name=ctx.get("source", "未知来源"),
                 page_number=ctx.get("page"),
-                chunk_content=content[:self.MAX_CHUNK_DISPLAY],
+                chunk_content=content[: self.MAX_CHUNK_DISPLAY],
                 relevance_score=ctx.get("score", 0.0),
                 position=CitationPosition.DIRECT,
                 verified=True,

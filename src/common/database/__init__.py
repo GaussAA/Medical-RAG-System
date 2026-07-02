@@ -1,4 +1,10 @@
-"""Database engine and ORM models."""
+"""Database engine and session management.
+
+⚠️ ORM models are NOT re-exported from here to avoid circular imports.
+Import them directly from each slice's models.py:
+  from src.documents.models import Document, Chunk, Heading
+  from src.conversation.models import Conversation, Message
+"""
 
 from src.common.database.engine import (
     _ensure_engine_initialized,
@@ -8,14 +14,7 @@ from src.common.database.engine import (
     get_session_factory,
     get_standalone_session,
 )
-from src.common.database.models import (
-    Base,
-    Chunk,
-    Conversation,
-    Document,
-    Heading,
-    Message,
-)
+from src.common.database.models import Base
 
 __all__ = [
     "_ensure_engine_initialized",
@@ -25,9 +24,4 @@ __all__ = [
     "get_standalone_session",
     "close_engine",
     "Base",
-    "Document",
-    "Chunk",
-    "Heading",
-    "Conversation",
-    "Message",
 ]

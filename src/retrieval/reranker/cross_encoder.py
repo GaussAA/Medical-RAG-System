@@ -1,9 +1,10 @@
 """Cross-encoder reranker — re-ranks retrieved candidates using a CrossEncoder model."""
+
 from typing import Any
 
 import torch
 
-from src.common.config.settings import get_settings
+from src.common.config import get_settings
 from src.common.models import RerankedNode, RetrievedNode
 
 

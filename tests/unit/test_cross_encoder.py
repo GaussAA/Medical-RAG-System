@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from src.common.models import RetrievedNode
-from src.query.reranker.cross_encoder import Reranker
+from src.retrieval.reranker.cross_encoder import Reranker
 
 
 class TestRerankerInit:

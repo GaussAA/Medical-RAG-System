@@ -1,6 +1,6 @@
 """Tests for medical safety evaluation module."""
 
-from rag.evaluation.medical_safety_eval import (
+from src.evaluation.medical_safety_eval import (
     MedicalSafetyEvaluator,
     MedicalSafetyMetrics,
 )

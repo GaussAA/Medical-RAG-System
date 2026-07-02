@@ -1,4 +1,5 @@
 """Document store — PostgreSQL CRUD for documents, chunks, and headings."""
+
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -7,8 +8,9 @@ from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.common.database import Chunk as DBChunk
-from src.common.database import Document, Heading, get_session_factory
+from src.common.database import get_session_factory
+from src.documents.models import Chunk as DBChunk
+from src.documents.models import Document, Heading
 
 
 class DocumentStore:

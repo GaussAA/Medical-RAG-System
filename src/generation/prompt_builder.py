@@ -1,9 +1,10 @@
 """Prompt builder — constructs system and user prompts with context injection."""
+
 # src/query/generation/prompt_builder.py
 from typing import Any
 
 from src.common.models import RetrievedNode
-from src.query.generation.prompt import (
+from src.generation.prompt import (
     build_system_prompt,
     build_user_prompt,
     format_contexts,

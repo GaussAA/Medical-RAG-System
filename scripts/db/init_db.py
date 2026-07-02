@@ -13,12 +13,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import text
 
-from src.common.database.engine import get_engine, get_session_factory
-from src.common.database.models import Base
+from src.common.database import Base, get_engine, get_session_factory
+from src.conversation.models import Conversation, Message  # noqa: F401, E402
+
+# Import slice models so they register with Base.metadata
+from src.documents.models import Chunk, Document, Heading  # noqa: F401, E402
 
 
 async def init_db():
-    """Create all database tables"""
+    """Create all database tables in their respective schemas."""
     print("[*] Connecting to database...")
 
     engine = await get_engine()
@@ -33,10 +36,23 @@ async def init_db():
 
     factory = get_session_factory()
 
+    print("\n[*] Creating database schemas...")
+    async with engine.begin() as conn:
+        # Create schemas for each vertical slice
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS documents"))
+        await conn.execute(text("CREATE SCHEMA IF NOT EXISTS conversation"))
+        print("  [+] Schemas created: documents, conversation")
+
     print("\n[*] Creating all tables...")
     async with factory() as session:
         print("  [-] Dropping old tables (if exist)...")
         try:
+            await session.execute(text("DROP TABLE IF EXISTS conversation.messages CASCADE"))
+            await session.execute(text("DROP TABLE IF EXISTS conversation.conversations CASCADE"))
+            await session.execute(text("DROP TABLE IF EXISTS documents.chunks CASCADE"))
+            await session.execute(text("DROP TABLE IF EXISTS documents.headings CASCADE"))
+            await session.execute(text("DROP TABLE IF EXISTS documents.documents CASCADE"))
+            # Also clean old public schema tables if they exist
             await session.execute(text("DROP TABLE IF EXISTS messages CASCADE"))
             await session.execute(text("DROP TABLE IF EXISTS conversations CASCADE"))
             await session.execute(text("DROP TABLE IF EXISTS chunks CASCADE"))
@@ -48,7 +64,7 @@ async def init_db():
             print(f"    [!] Drop error: {e}")
             await session.rollback()
 
-        print("  [-] Creating new tables...")
+        print("  [-] Creating new tables in slice schemas...")
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -61,29 +77,29 @@ async def init_db():
     async with factory() as session:
         result = await session.execute(
             text("""
-            SELECT table_name
+            SELECT table_schema, table_name
             FROM information_schema.tables
-            WHERE table_schema = 'public'
-            ORDER BY table_name
+            WHERE table_schema IN ('documents', 'conversation')
+            ORDER BY table_schema, table_name
         """)
         )
-        tables = [row[0] for row in result.fetchall()]
+        tables = [(row[0], row[1]) for row in result.fetchall()]
 
         expected_tables = [
-            "documents",
-            "chunks",
-            "headings",
-            "conversations",
-            "messages",
+            ("documents", "documents"),
+            ("documents", "chunks"),
+            ("documents", "headings"),
+            ("conversation", "conversations"),
+            ("conversation", "messages"),
         ]
-        for table in expected_tables:
-            if table in tables:
-                print(f"  [+] {table}")
+        for schema, table in expected_tables:
+            if (schema, table) in tables:
+                print(f"  [+] {schema}.{table}")
             else:
-                print(f"  [!] {table} (NOT FOUND)")
+                print(f"  [!] {schema}.{table} (NOT FOUND)")
                 return False
 
-    print(f"\n[+] Database initialized! Created {len(expected_tables)} tables")
+    print(f"\n[+] Database initialized! Created {len(expected_tables)} tables in 2 schemas")
     return True
 
 

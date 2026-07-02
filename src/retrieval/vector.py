@@ -1,13 +1,14 @@
 """Vector retriever — Qdrant-based embedding search with lazy GPU model loading."""
+
 import asyncio
 from typing import Any
 
 import torch
 from loguru import logger
 
-from src.common.config.settings import get_settings
+from src.common.config import get_settings
 from src.common.models import RetrievedNode
-from src.query.retrieval.base import BaseRetriever
+from src.retrieval.base import BaseRetriever
 
 
 class VectorRetriever(BaseRetriever):

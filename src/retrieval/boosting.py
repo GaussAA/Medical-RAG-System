@@ -1,6 +1,6 @@
 import re
 
-from src.common.config.settings import get_settings
+from src.common.config import get_settings
 from src.common.models import RetrievedNode
 
 

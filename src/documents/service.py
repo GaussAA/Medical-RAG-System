@@ -1,4 +1,5 @@
 """Document lifecycle management — upload, process, index, and delete documents."""
+
 import hashlib
 import uuid
 from pathlib import Path
@@ -12,16 +13,13 @@ from src.documents.indexer import RetrievalIndexer
 from src.documents.processor import DocumentProcessor
 from src.documents.store import DocumentStore
 
-# ponytail: concrete import for fallback only; DI path uses RAGEnginePort
-from src.query.engine import RAGEngine
-
 
 class DocumentService:
     """Document lifecycle management using composition of specialized classes."""
 
     def __init__(
         self,
-        rag_engine: RAGEngine | None = None,
+        rag_engine: Any = None,
         processor: DocumentProcessor | None = None,
         store: DocumentStore | None = None,
         indexer: RetrievalIndexer | None = None,
@@ -30,7 +28,13 @@ class DocumentService:
         self.processor = processor if processor is not None else DocumentProcessor()
         self.store = store if store is not None else DocumentStore(async_session=async_session)
         self.indexer = indexer if indexer is not None else RetrievalIndexer()
-        self.rag_engine = rag_engine if rag_engine is not None else RAGEngine()
+        # ponytail: lazy import to avoid circular dep docments ↔ agent
+        if rag_engine is not None:
+            self.rag_engine = rag_engine
+        else:
+            from src.agent.rag_agent import RAGAgent  # noqa: E0401
+
+            self.rag_engine = RAGAgent()
         self.documents: dict[str, dict[str, Any]] = {}
         self._owns_session = async_session is not None  # Track if WE own the session
 

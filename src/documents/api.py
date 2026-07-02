@@ -1,4 +1,5 @@
 """Document management API routes — upload, list, delete, batch, and consistency check."""
+
 import asyncio
 import re
 import uuid
@@ -9,7 +10,6 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from loguru import logger
 from sqlalchemy import text
 
-from src.common.database import Document
 from src.common.models import (
     BatchDeleteRequest,
     BatchOperationResponse,
@@ -29,6 +29,7 @@ from src.common.models import (
     DocumentUploadResponse,
     OrphanCleanupResponse,
 )
+from src.documents.models import Document
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
@@ -62,14 +63,14 @@ async def process_batch_documents_background(
     """
     批量处理文档 - 统一向量化，只加载一次 embedding 模型。
     """
+    from src.agent.rag_agent import RAGAgent
     from src.common.database import get_session_factory
     from src.documents import DocumentProcessor
-    from src.query.engine import RAGEngine
 
     factory = get_session_factory()
     async_session = factory()
     processor = DocumentProcessor()
-    rag_engine = RAGEngine()
+    rag_engine = RAGAgent()
 
     try:
         logger.info(f"[Batch {batch_id}] Starting batch processing of {len(file_infos)} documents")
@@ -138,7 +139,7 @@ async def process_batch_documents_background(
                 retrieved_nodes,
             ) in doc_chunks_map.items():
                 try:
-                    from src.common.database import Heading
+                    from src.documents.models import Heading
 
                     position_to_id: dict[int, str] = {}
                     position_to_heading: dict[int, uuid.UUID] = {}
@@ -186,8 +187,8 @@ async def process_batch_documents_background(
                 retrieved_nodes,
             ) in doc_chunks_map.items():
                 try:
-                    from src.common.database import Chunk as DBChunk
-                    from src.common.database import Document as DBDocument
+                    from src.documents.models import Chunk as DBChunk
+                    from src.documents.models import Document as DBDocument
 
                     # Use the actual heading IDs saved in Step 2
                     heading_ids_map = doc_heading_ids.get(doc_id, {})
