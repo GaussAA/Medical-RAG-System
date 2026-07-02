@@ -72,6 +72,25 @@ LLM_TOKENS: Counter = Counter(
     registry=REGISTRY,
 )
 
+# === Cache metrics ===
+
+CACHE_HITS: Counter = Counter(
+    "rag_cache_hits_total",
+    "Total number of Redis cache hits",
+    registry=REGISTRY,
+)
+CACHE_MISSES: Counter = Counter(
+    "rag_cache_misses_total",
+    "Total number of Redis cache misses",
+    registry=REGISTRY,
+)
+CACHE_FAILURES: Counter = Counter(
+    "rag_cache_failures_total",
+    "Total number of Redis cache operation failures",
+    ["reason"],
+    registry=REGISTRY,
+)
+
 # === Error metrics ===
 
 ERROR_COUNT: Counter = Counter(

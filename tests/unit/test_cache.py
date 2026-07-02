@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 """TestMakeCacheKey"""
-from src.common.cache.manager import CacheManager, cached, make_cache_key
+from src.common.cache import CacheManager, cached, make_cache_key
 
 
 class TestMakeCacheKey:
@@ -179,7 +179,8 @@ class TestCacheManager:
 
         mock_client.setex.assert_called_once()
         call_args = mock_client.setex.call_args
-        assert call_args[0][1] == 300  # TTL
+        # TTL has ±10% jitter applied, so expect [270, 330]
+        assert 270 <= call_args[0][1] <= 330, f"Expected TTL in [270, 330], got {call_args[0][1]}"
 
     @pytest.mark.asyncio
     async def test_exists(self):

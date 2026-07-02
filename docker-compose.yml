@@ -23,7 +23,7 @@ services:
 
   # ========== Qdrant 向量数据库 ==========
   qdrant:
-    image: qdrant/qdrant:v1.18.2
+    image: qdrant/qdrant:latest
     container_name: local_qdrant
     restart: unless-stopped
     ports:
@@ -61,7 +61,7 @@ services:
 
   # ========== WhoDB 数据库管理工具 ==========
   whodb:
-    image: clidey/whodb:v0.118.0
+    image: clidey/whodb:latest
     container_name: local_whodb
     restart: unless-stopped
     environment:

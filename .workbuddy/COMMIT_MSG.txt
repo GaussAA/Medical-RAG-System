@@ -1,0 +1,21 @@
+fix(cache): 重构缓存层 — 熔断器重试 + TTL 抖动 + 可观测性
+
+核心修复：
+- 将永久性 `_down` 旗标替换为三态熔断器（Closed/Open/Half-Open）
+- 30 秒冷却期后自动尝试重连，不再"一次失败终身禁用"
+- 每次调用前 `ping()` 检测存量连接，失效则自动重建
+- 新增 `reconnect_now()` 方法可主动触发重连
+
+性能增强：
+- `set()` 写入 TTL 自动施加 ±10% 随机 jitter，防缓存雪崩
+
+可观测性：
+- 新增 `rag_cache_hits_total` / `rages_misses_total` / `rag_cache_failures_total` Prometheus 指标
+- 熔断器状态变更发射结构化日志（event="cache_circuit_state"）
+
+代码整洁：
+- 移除 `__init__` 中 `self._client = None` 重复赋值（第 40-41 行）
+- 更新单元测试适配 TTL jitter（assert [270, 330] 区间）
+
+其他：
+- docker-compose.yml: qdrant/whodb 版本标签更新
