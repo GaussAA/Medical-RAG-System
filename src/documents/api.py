@@ -10,6 +10,8 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from loguru import logger
 from sqlalchemy import text
 
+from src.common.config import get_settings
+from src.common.database import get_session_factory
 from src.common.models import (
     BatchDeleteRequest,
     BatchOperationResponse,
@@ -29,241 +31,17 @@ from src.common.models import (
     DocumentUploadResponse,
     OrphanCleanupResponse,
 )
+from src.conversation import ConsistencyChecker, ConsistencyCheckerPort
+from src.documents import DocumentService, DocumentStore, RetrievalIndexer
+from src.documents.background import process_batch_documents_background, process_document_background
 from src.documents.models import Document
+from src.common.models import RetrievedNode
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
-
-async def process_document_background(doc_id: str, file_path: str, title: str | None = None):
-    """后台处理文档（使用独立的 DocumentService 实例）"""
-    from src.common.database import get_session_factory
-    from src.documents import DocumentService
-
-    factory = get_session_factory()
-    async_session = factory()
-    document_service = DocumentService(async_session=async_session)
-
-    try:
-        logger.info(f"Starting to process document {doc_id}")
-        await document_service.process_document(file_path, title=title, doc_id=doc_id)
-        logger.info(f"Document {doc_id} processed successfully")
-    except Exception as e:
-        logger.error(f"Error processing document {doc_id}: {e}")
-    finally:
-        if async_session is not None:
-            await async_session.close()
-            logger.debug(f"Background session closed for document {doc_id}")
-
-
-async def process_batch_documents_background(
-    batch_id: str,
-    file_infos: list[dict],
-    app_state_ref,  # Reference to app.state to update status
-):
-    """
-    批量处理文档 - 统一向量化，只加载一次 embedding 模型。
-    """
-    from src.agent.rag_agent import RAGAgent
-    from src.common.database import get_session_factory
-    from src.documents import DocumentProcessor
-
-    factory = get_session_factory()
-    async_session = factory()
-    processor = DocumentProcessor()
-    rag_engine = RAGAgent()
-
-    try:
-        logger.info(f"[Batch {batch_id}] Starting batch processing of {len(file_infos)} documents")
-
-        # Step 1: Parse all documents and collect chunks (can be done in parallel)
-        all_nodes = []
-        doc_chunks_map: dict[
-            str, tuple[list, list[dict], list]
-        ] = {}  # doc_id -> (chunks, heading_ids, retrieved_nodes)
-
-        for file_info in file_infos:
-            doc_id = file_info["doc_id"]
-            file_path = Path(file_info["file_path"])
-
-            try:
-                # Parse document
-                parsed_doc, heading_tree = await processor.parse_with_headings(file_path)
-                logger.info(f"[Batch {batch_id}] Parsed {file_path.name}, text length: {len(parsed_doc.text_content)}")
-
-                # Build heading tree dict
-                heading_tree_dict = {}
-                for h in heading_tree:
-                    heading_tree_dict[h["level"]] = h["title"]
-
-                # Chunk document
-                chunks = processor.chunk(
-                    parsed_doc.text_content,
-                    metadata={
-                        "doc_id": doc_id,
-                        "source_file": file_path.name,
-                        "heading_tree": heading_tree_dict,
-                        "tables": [t.model_dump() for t in parsed_doc.tables],
-                    },
-                )
-                logger.info(f"[Batch {batch_id}] Chunked {file_path.name} into {len(chunks)} chunks")
-
-                # Save processed text
-                processor.save_processed_text(file_path, parsed_doc.text_content)
-
-                # Create RetrievedNodes
-                retrieved_nodes = processor.create_retrieved_nodes(doc_id, chunks, file_path.name)
-                all_nodes.extend(retrieved_nodes)
-
-                # Store for later processing
-                doc_chunks_map[doc_id] = (chunks, heading_tree, retrieved_nodes)
-
-            except Exception as e:
-                logger.error(f"[Batch {batch_id}] Failed to parse/chunk {file_info['file_path']}: {e}")
-                # Update status to failed
-                for item in app_state_ref.batch_upload_status[batch_id].items:
-                    if item.document_id == doc_id:
-                        item.status = "failed"
-                        item.error_message = str(e)
-                        break
-                app_state_ref.batch_upload_status[batch_id].processing -= 1
-                app_state_ref.batch_upload_status[batch_id].failed += 1
-
-        # Step 2: Save headings to PostgreSQL for each document
-        # Store the actual heading IDs for each document
-        doc_heading_ids: dict[str, dict[int, str]] = {}  # doc_id -> {heading_position: heading_id}
-
-        async with factory() as session:
-            for doc_id, (
-                chunks,
-                heading_tree,
-                retrieved_nodes,
-            ) in doc_chunks_map.items():
-                try:
-                    from src.documents.models import Heading
-
-                    position_to_id: dict[int, str] = {}
-                    position_to_heading: dict[int, uuid.UUID] = {}
-
-                    for heading_info in heading_tree:
-                        parent_position = heading_info.get("parent_position")
-                        heading = Heading(
-                            id=uuid.uuid4(),
-                            doc_id=uuid.UUID(doc_id),
-                            level=heading_info["level"],
-                            title=heading_info["title"],
-                            position=heading_info["position"],
-                            parent_id=position_to_heading.get(parent_position) if parent_position is not None else None,
-                        )
-                        session.add(heading)
-                        await session.flush()
-                        position_to_id[heading_info["position"]] = str(heading.id)
-                        position_to_heading[heading_info["position"]] = heading.id
-
-                    await session.commit()
-                    doc_heading_ids[doc_id] = position_to_id.copy()
-                    logger.info(f"[Batch {batch_id}] Saved headings for doc {doc_id}")
-                except Exception as e:
-                    logger.error(f"[Batch {batch_id}] Failed to save headings for {doc_id}: {e}")
-                    await session.rollback()
-
-        # Step 3: Vectorize ALL nodes at once (single embedding model load)
-        if all_nodes:
-            logger.info(f"[Batch {batch_id}] Vectorizing {len(all_nodes)} chunks in batch")
-            success = await rag_engine.process_document(all_nodes)
-            if not success:
-                logger.warning(f"[Batch {batch_id}] GPU vectorization failed, falling back to CPU")
-                from src.documents import RetrievalIndexer
-
-                indexer = RetrievalIndexer()
-                await indexer.add_documents(all_nodes)
-            else:
-                logger.info(f"[Batch {batch_id}] Batch vectorization completed successfully")
-
-        # Step 4: Save chunks to PostgreSQL and update document status
-        async with factory() as session:
-            for doc_id, (
-                chunks,
-                heading_tree,
-                retrieved_nodes,
-            ) in doc_chunks_map.items():
-                try:
-                    from src.documents.models import Chunk as DBChunk
-                    from src.documents.models import Document as DBDocument
-
-                    # Use the actual heading IDs saved in Step 2
-                    heading_ids_map = doc_heading_ids.get(doc_id, {})
-
-                    # Verify chunks were provided
-                    if not chunks:
-                        logger.warning(f"[Batch {batch_id}] No chunks to save for doc {doc_id}")
-                        continue
-
-                    # Save chunks - use chunk position to find heading_id
-                    for i, chunk in enumerate(chunks):
-                        chunk_position = chunk.metadata.position if hasattr(chunk.metadata, "position") else i
-                        heading_id_str = heading_ids_map.get(chunk_position)
-                        chunk_record = DBChunk(
-                            id=uuid.UUID(chunk.chunk_id),
-                            doc_id=uuid.UUID(doc_id),
-                            heading_id=uuid.UUID(heading_id_str) if heading_id_str else None,
-                            content=chunk.content,
-                            char_count=chunk.metadata.char_count,
-                            position=i,
-                            content_type=chunk.metadata.content_type,
-                            section_title=chunk.metadata.section_title,
-                        )
-                        session.add(chunk_record)
-
-                    # Force flush to catch any early errors
-                    await session.flush()
-
-                    # Update document status to completed
-                    doc = await session.get(DBDocument, uuid.UUID(doc_id))
-                    if doc:
-                        doc.status = "completed"
-                        doc.total_chunks = len(chunks)
-                        await session.commit()
-                        logger.info(f"[Batch {batch_id}] Saved {len(chunks)} chunks for doc {doc_id}")
-
-                        # Verify save was successful
-                        verify_result = await session.execute(
-                            text("SELECT COUNT(*) FROM chunks WHERE doc_id = :doc_id"),
-                            {"doc_id": uuid.UUID(doc_id)},
-                        )
-                        verify_count = verify_result.scalar()
-                        if verify_count != len(chunks):
-                            logger.error(
-                                f"[Batch {batch_id}] Chunk save verification failed for {doc_id}: "
-                                f"expected {len(chunks)}, got {verify_count}"
-                            )
-
-                    # Update batch status
-                    for item in app_state_ref.batch_upload_status[batch_id].items:
-                        if item.document_id == doc_id:
-                            item.status = "completed"
-                            break
-                    app_state_ref.batch_upload_status[batch_id].processing -= 1
-                    app_state_ref.batch_upload_status[batch_id].completed += 1
-
-                except Exception as e:
-                    logger.error(f"[Batch {batch_id}] Failed to save chunks for {doc_id}: {e}")
-                    await session.rollback()
-                    for item in app_state_ref.batch_upload_status[batch_id].items:
-                        if item.document_id == doc_id:
-                            item.status = "failed"
-                            item.error_message = str(e)
-                            break
-                    app_state_ref.batch_upload_status[batch_id].processing -= 1
-                    app_state_ref.batch_upload_status[batch_id].failed += 1
-
-        logger.info(f"[Batch {batch_id}] Batch processing completed")
-
-    except Exception as e:
-        logger.error(f"[Batch {batch_id}] Batch processing failed: {e}")
-    finally:
-        if async_session is not None:
-            await async_session.close()
-        logger.debug(f"[Batch {batch_id}] Background session closed")
+MAX_BATCH_SIZE = 50
+MAX_UPLOAD_SIZE_MB = 50
+_MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
@@ -302,6 +80,12 @@ async def upload_document(
     # Save original file to raw_documents
     raw_file_path.parent.mkdir(parents=True, exist_ok=True)
     content = await file.read()
+    if len(content) > _MAX_UPLOAD_SIZE_BYTES:
+        size_mb = len(content) / (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large: {size_mb:.1f}MB exceeds maximum {MAX_UPLOAD_SIZE_MB}MB",
+        )
     with open(raw_file_path, "wb") as f:
         f.write(content)
 
@@ -504,7 +288,6 @@ async def list_documents(
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
 ) -> DocumentListResponse:
     """List documents with filtering and pagination."""
-    from src.documents import DocumentStore
 
     # Parse tags from comma-separated string
     tag_list = [t.strip().lower() for t in tags.split(",")] if tags else None
@@ -556,7 +339,6 @@ async def get_document_status(
     document_id: str,
 ) -> DocumentStatus:
     """从数据库直接读取文档状态"""
-    from src.common.database import get_session_factory
 
     factory = get_session_factory()
     async with factory() as session:
@@ -579,7 +361,6 @@ async def update_document(
     update_data: DocumentUpdateRequest,
 ) -> DocumentStatus:
     """Update document tags and/or status."""
-    from src.documents import DocumentStore
 
     async with DocumentStore() as store:
         doc = await store.update_document(
@@ -607,7 +388,6 @@ async def get_document_preview(
     document_id: str,
 ) -> DocumentPreviewResponse:
     """Get document preview (text preview or processing status)."""
-    from src.common.database import get_session_factory
 
     factory = get_session_factory()
     async with factory() as session:
@@ -667,7 +447,6 @@ async def get_document_chunks(
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
 ) -> ChunkListResponse:
     """Get all chunks for a document with pagination."""
-    from src.documents import DocumentStore
 
     async with DocumentStore() as store:
         chunks, total = await store.get_chunks(document_id, page=page, page_size=page_size)
@@ -699,7 +478,6 @@ async def update_chunk(
     update_data: ChunkUpdateRequest,
 ) -> dict[str, str]:
     """Update a chunk's content and/or metadata."""
-    from src.documents import DocumentStore
 
     # Update chunk in PostgreSQL
     async with DocumentStore() as store:
@@ -714,16 +492,31 @@ async def update_chunk(
 
     # If content changed, need to re-index
     if update_data.content:
-        # Delete old vector from Qdrant and BM25, then re-add
-        from src.documents import RetrievalIndexer
-
         indexer = RetrievalIndexer()
+        section_parts = document_id.split("_", 1)
 
-        # Delete old entries
+        # Create a new RetrievedNode for the updated chunk
+        updated_node = RetrievedNode(
+            node_id=chunk_id,
+            content=update_data.content,
+            score=1.0,
+            metadata={
+                "doc_id": document_id,
+                "chunk_id": chunk_id,
+                "source_file": section_parts[1] if len(section_parts) > 1 else "",
+                "section_title": update_data.section_title or "",
+                "heading_tree": {},
+                "content_type": "text",
+                "char_count": len(update_data.content),
+                "position": 0,
+            },
+        )
+
+        # Re-index: delete old, add new
         await indexer.delete_documents(document_id, 1)
+        await indexer.add_documents([updated_node])
 
-        # Re-embed and insert (simplified - full implementation would use DocumentProcessor)
-        logger.info(f"Chunk {chunk_id} updated, re-indexing required")
+        logger.info(f"Chunk {chunk_id} re-indexed after content update")
 
     return {"chunk_id": chunk_id, "status": "re-indexed"}
 
@@ -735,7 +528,6 @@ async def delete_chunk(
     chunk_id: str,
 ) -> dict[str, str]:
     """Delete a single chunk from a document."""
-    from src.documents import DocumentStore
 
     async with DocumentStore() as store:
         success = await store.delete_chunk(document_id, chunk_id)
@@ -743,7 +535,6 @@ async def delete_chunk(
         raise HTTPException(status_code=404, detail="Chunk not found")
 
     # Delete from vector index
-    from src.documents import RetrievalIndexer
 
     indexer = RetrievalIndexer()
     await indexer.delete_documents(document_id, 1)
@@ -757,7 +548,6 @@ async def batch_delete_documents(
     batch_data: BatchDeleteRequest,
 ) -> BatchOperationResponse:
     """Delete multiple documents by ID."""
-    from src.documents import DocumentStore
 
     if len(batch_data.ids) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 documents per batch operation")
@@ -772,7 +562,6 @@ async def batch_delete_documents(
         for doc_id in batch_data.ids:
             try:
                 # Delete from vector/BM25
-                from src.documents import RetrievalIndexer
 
                 indexer = RetrievalIndexer()
                 await indexer.delete_documents(doc_id, 100)  # Approximate max chunks
@@ -795,7 +584,6 @@ async def batch_update_documents(
     batch_data: BatchUpdateRequest,
 ) -> BatchOperationResponse:
     """Update status and/or tags for multiple documents."""
-    from src.documents import DocumentStore
 
     if len(batch_data.ids) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 documents per batch operation")
@@ -837,7 +625,6 @@ async def check_consistency(
     and highlights inconsistencies. Optionally repairs them automatically.
     """
     # ponytail: local import; ConsistencyChecker satisfies the port structurally
-    from src.conversation import ConsistencyChecker, ConsistencyCheckerPort
 
     checker: ConsistencyCheckerPort = ConsistencyChecker()
     result = await checker.check_all_consistency(repair=repair)
@@ -856,7 +643,6 @@ async def cleanup_orphaned_data(
     or other inconsistencies.
     """
     # ponytail: local import; ConsistencyChecker satisfies the port structurally
-    from src.conversation import ConsistencyChecker, ConsistencyCheckerPort
 
     checker: ConsistencyCheckerPort = ConsistencyChecker()
     result = await checker.cleanup_orphans()
@@ -877,7 +663,6 @@ async def rebuild_bm25_index(
     Note: This only rebuilds the BM25 index in memory. For persistence,
     ensure bm25_persist_path is configured in config.yaml.
     """
-    from src.documents import RetrievalIndexer
 
     indexer = RetrievalIndexer()
     result = await indexer.rebuild_bm25_from_qdrant()

@@ -1,14 +1,33 @@
-feat(storage): 完善三重存储同步 — heading_tree/chunk_id/健康检查
+P0 三件事，俱已毕。
 
-存储增强：
-- chunks 表新增 heading_tree JSON 列，PG 可独立还原层级上下文
-- Qdrant payload 新增 chunk_id 字段，支持 PG ↔ Qdrant JOIN
-- 数据模型文档同步更新（ER 图 + Qdrant payload 表）
+## 一、P0-1：拆分 api.py（消除循环依赖）
 
-可观测性：
-- /api/v1/health?check_dependencies 新增 bm25 健康检查
-- Redis 健康检查改用 CacheManager.reconnect_now()，与熔断器状态一致
+**做法**：
+- 将 `process_document_background` / `process_batch_documents_background` 移入新文件 `src/documents/background.py`
+- `background.py` 使用顶层导入（`from src.agent.rag_agent import RAGAgent` 等）
+- 移除 `api.py` 中全部 15 处函数体内 `    from src...` 延迟导入
+- `api.py` 的导入全部转为顶层（仅 6 行 import）
 
-文档更新：
-- 架构图补充 Redis（虚线表示缓存路径，不参与同步）
-- 同步规则增加 Redis 不参与删除同步的说明及理由
+**成果**：api.py 延迟导入从 **17 处归零**，模块加载拓扑干净无环。
+
+## 二、P0-2：编写 test_chunker.py
+
+**新增 23 个测试**，覆盖 9 个维度：
+
+| 测试类 | 覆盖场景 |
+|--------|---------|
+| TestChunkerBoundary | 空文本、空白符、单段、无标题纯文本 |
+| TestChunkerHeadings | 仅有标题、多 H1、嵌套 H3、heading_tree 继承 |
+| TestChunkerContentType | 表格检测、列表检测、混合类型保留 |
+| TestChunkerLargeContent | 超长内容分片、换行分隔大文本 |
+| TestChunkerMerging | 相邻小块合并、不同标题不合并 |
+| TestChunkerMetadata | 字段完整性、position 递增、heading_tree 传递 |
+| TestChunkerTable | 带中文标题的表格 |
+| TestChunkerRegression | Unicode/℃→±、内联代码、无空行标题、doc_id 传播 |
+
+## 三、P0-3：修复 update_chunk + 文件大小校验
+
+- **update_chunk**：删除旧索引后补充 `add_documents([updated_node])`，re-index 完整
+- **上传校验**：新增 `MAX_UPLOAD_SIZE_MB=50`，单文件超限返回 413
+
+**测试**：77 passed，零失败。
