@@ -5,19 +5,15 @@ All imports here are top-level — no cyclic dependency with agent layer
 because ``src.agent`` never imports from ``src.documents``.
 """
 
-import asyncio
 import uuid
 from pathlib import Path
 
 from loguru import logger
-from sqlalchemy import text
 
 from src.agent.rag_agent import RAGAgent
 from src.common.database import get_session_factory
-from src.documents import DocumentProcessor, DocumentService, RetrievalIndexer
-from src.documents.models import Chunk as DBChunk
+from src.documents import DocumentProcessor, DocumentService, DocumentStore, RetrievalIndexer
 from src.documents.models import Document as DBDocument
-from src.documents.models import Heading
 
 
 async def process_document_background(doc_id: str, file_path: str, title: str | None = None):

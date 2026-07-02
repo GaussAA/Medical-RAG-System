@@ -76,9 +76,13 @@ async def check_bm25() -> dict[str, Any]:
     """Check BM25 index file is accessible and non-empty."""
     try:
         from pathlib import Path
+
         from src.common.config import get_settings
 
-        path = Path(get_settings().rag.retrieval.bm25_persist_path)
+        persist_path = get_settings().rag.retrieval.bm25_persist_path
+        if not persist_path:
+            return {"status": "degraded", "error": "BM25 persist path not configured"}
+        path = Path(persist_path)
         if not path.exists():
             return {"status": "degraded", "error": "BM25 index file not found (will be created on first document)"}
         size = path.stat().st_size

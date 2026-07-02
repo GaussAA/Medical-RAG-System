@@ -244,6 +244,15 @@ class DocumentService:
                 logger.warning(f"delete_document: doc {doc_id} not found in memory or database")
                 return False
             total_chunks = db_doc.total_chunks or 0
+            # Reconstruct in-memory record from DB for downstream operations
+            doc = {
+                "id": doc_id,
+                "file_path": db_doc.file_path,
+                "file_name": db_doc.file_name,
+                "title": db_doc.title,
+                "status": db_doc.status,
+                "total_chunks": total_chunks,
+            }
             logger.info(f"delete_document: loaded doc {doc_id} from DB, total_chunks={total_chunks}")
         else:
             total_chunks = doc.get("total_chunks", 0)

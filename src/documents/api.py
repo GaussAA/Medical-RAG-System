@@ -8,9 +8,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from loguru import logger
-from sqlalchemy import text
 
-from src.common.config import get_settings
 from src.common.database import get_session_factory
 from src.common.models import (
     BatchDeleteRequest,
@@ -30,12 +28,12 @@ from src.common.models import (
     DocumentUpdateRequest,
     DocumentUploadResponse,
     OrphanCleanupResponse,
+    RetrievedNode,
 )
 from src.conversation import ConsistencyChecker, ConsistencyCheckerPort
-from src.documents import DocumentService, DocumentStore, RetrievalIndexer
+from src.documents import DocumentStore, RetrievalIndexer
 from src.documents.background import process_batch_documents_background, process_document_background
 from src.documents.models import Document
-from src.common.models import RetrievedNode
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
