@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Generate high-risk eval dataset (~60 entries)."""
 import json, os
 
