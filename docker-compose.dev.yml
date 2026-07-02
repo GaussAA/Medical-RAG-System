@@ -1,0 +1,15 @@
+# =============================================================================
+# Medical RAG System — 开发工具覆盖层
+# 配合 docker-compose.yml 使用: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# =============================================================================
+
+services:
+  # ========== WhoDB 数据库管理工具（仅开发环境）==========
+  whodb:
+    image: clidey/whodb:latest
+    container_name: medical-rag-whodb
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    networks:
+      - medical-rag-net

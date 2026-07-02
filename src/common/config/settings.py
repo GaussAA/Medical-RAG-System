@@ -43,6 +43,8 @@ class QdrantConfig(BaseModel):
     host: str = "localhost"
     port: int = 6333
     collection: str = "medical_knowledge"
+    timeout: int = 10  # connection timeout in seconds
+    prefer_grpc: bool = False
 
     @property
     def url(self) -> str:
@@ -71,6 +73,7 @@ class DatabaseConfig(BaseModel):
 class EmbeddingConfig(BaseModel):
     name: str = "BAAI/bge-m3"
     device: str = "cuda"
+    dimension: int = 1024  # bge-m3 dense vector dimension
 
 
 class RerankerConfig(BaseModel):

@@ -16,13 +16,13 @@ Medical Knowledge Base RAG Q&A System - 医疗文档检索增强生成系统，�
 > 源码根目录为 `src/`，所有新代码在此目录下。
 > 旧目录（app/、rag/、config/）已删除。
 
-| 切片 | 路径 | 职责 |
-|------|------|------|
-| 横切层 | `src/common/` | config/database/cache/logging/monitoring/safety/DI |
-| 文档管理 | `src/documents/` | 上传/解析/分块/索引 |
-| RAG查询 | `src/query/` | 检索/重排/生成/引用验证 |
-| 会话管理 | `src/conversation/` | 多轮对话上下文 |
-| 评估系统 | `src/evaluation/` | RAG评估/基准测试/报告 |
+| 切片     | 路径                | 职责                                               |
+| -------- | ------------------- | -------------------------------------------------- |
+| 横切层   | `src/common/`       | config/database/cache/logging/monitoring/safety/DI |
+| 文档管理 | `src/documents/`    | 上传/解析/分块/索引                                |
+| RAG查询  | `src/query/`        | 检索/重排/生成/引用验证                            |
+| 会话管理 | `src/conversation/` | 多轮对话上下文                                     |
+| 评估系统 | `src/evaluation/`   | RAG评估/基准测试/报告                              |
 
 **入口**: `src/main.py`（FastAPI应用工厂）  
 **DI容器**: `src/common/di/container.py`  
@@ -122,19 +122,19 @@ uv run pytest tests/integration/                   # 集成测试（需 PostgreS
 
 ## 关键文件参考
 
-| 文件 | 职责 |
-| ---- | ---- |
-| [src/main.py](src/main.py) | FastAPI 应用工厂、CORS、路由注册、DI 容器 |
-| [src/common/di/container.py](src/common/di/container.py) | 依赖注入容器（服务组装） |
-| [src/query/engine.py](src/query/engine.py) | RAG 查询编排入口（原 app/core/rag_engine.py） |
-| [src/conversation/manager.py](src/conversation/manager.py) | Session 状态、消息持久化、驱逐 |
-| [src/query/api.py](src/query/api.py) | 查询 API 入口 |
-| [src/documents/api.py](src/documents/api.py) | 文档上传/批量上传 API |
-| [src/query/generation/generator.py](src/query/generation/generator.py) | LLM 调用、prompt 构建 |
-| [src/query/retrieval/hybrid.py](src/query/retrieval/hybrid.py) | 混合检索 + RRF |
-| [src/evaluation/evaluator.py](src/evaluation/evaluator.py) | RAG 评估器入口 |
-| [frontend/app.py](frontend/app.py) | Streamlit 前端入口 |
-| [frontend/api_client.py](frontend/api_client.py) | 统一 API 客户端 |
+| 文件                                                                   | 职责                                          |
+| ---------------------------------------------------------------------- | --------------------------------------------- |
+| [src/main.py](src/main.py)                                             | FastAPI 应用工厂、CORS、路由注册、DI 容器     |
+| [src/common/di/container.py](src/common/di/container.py)               | 依赖注入容器（服务组装）                      |
+| [src/query/engine.py](src/query/engine.py)                             | RAG 查询编排入口（原 app/core/rag_engine.py） |
+| [src/conversation/manager.py](src/conversation/manager.py)             | Session 状态、消息持久化、驱逐                |
+| [src/query/api.py](src/query/api.py)                                   | 查询 API 入口                                 |
+| [src/documents/api.py](src/documents/api.py)                           | 文档上传/批量上传 API                         |
+| [src/query/generation/generator.py](src/query/generation/generator.py) | LLM 调用、prompt 构建                         |
+| [src/query/retrieval/hybrid.py](src/query/retrieval/hybrid.py)         | 混合检索 + RRF                                |
+| [src/evaluation/evaluator.py](src/evaluation/evaluator.py)             | RAG 评估器入口                                |
+| [frontend/app.py](frontend/app.py)                                     | Streamlit 前端入口                            |
+| [frontend/api_client.py](frontend/api_client.py)                       | 统一 API 客户端                               |
 
 ## 代码组织
 

@@ -1,8 +1,19 @@
+# =============================================================================
+# Medical RAG System — 基础设施层
+# PostgreSQL / Qdrant / Redis 作为数据层，由 Docker 命名卷管理持久化
+# =============================================================================
+
+x-health-defaults: &health-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 15s
+
 services:
   # ========== PostgreSQL 关系型数据库 ==========
   postgres:
     image: postgres:18-alpine
-    container_name: local_postgres
+    container_name: medical-rag-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres_admin
@@ -11,67 +22,110 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./data/database/postgres_data:/var/lib/postgresql # 已适配 PG18 新版路径
+      - pg_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres_admin -d medical_rag"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+      <<: *health-defaults
     networks:
-      - database_net
+      - medical-rag-net
 
   # ========== Qdrant 向量数据库 ==========
   qdrant:
-    image: qdrant/qdrant:latest
-    container_name: local_qdrant
+    image: qdrant/qdrant:v1.13.0
+    container_name: medical-rag-qdrant
     restart: unless-stopped
     ports:
       - "6333:6333"
-      - "6334:6334"
     volumes:
-      - ./data/database/qdrant_storage:/qdrant/storage
+      - qdrant_data:/qdrant/storage
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+      <<: *health-defaults
     networks:
-      - database_net
+      - medical-rag-net
 
   # ========== Redis 缓存数据库 ==========
   redis:
     image: redis:8.6.3-alpine
-    container_name: local_redis
+    container_name: medical-rag-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
-      - ./data/database/redis_data:/data
-    command: redis-server --appendonly yes --bind 0.0.0.0
+      - redis_data:/data
+    command: >
+      redis-server --appendonly yes
+      --bind 0.0.0.0
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      <<: *health-defaults
     networks:
-      - database_net
+      - medical-rag-net
 
-  # ========== WhoDB 数据库管理工具 ==========
-  whodb:
-    image: clidey/whodb:latest
-    container_name: local_whodb
-    restart: unless-stopped
+  # ========== 一次性初始化 ==========
+  init-db:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medical-rag-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    env_file:
+      - .env
     environment:
-      - LMSTUDIO_BASE_URL=http://host.docker.internal:1234/v1
-      - LMSTUDIO_MODELS=google/gemma-4-e4b
-    ports:
-      - "8081:8080" # Web 界面
+      - POSTGRES_HOST=postgres
+      - QDRANT_HOST=qdrant
+      - REDIS_HOST=redis
+    command: >
+      sh -c "uv run python scripts/db/init_db.py &&
+             uv run python scripts/db/init_qdrant.py"
+    volumes:
+      - app_data:/app/data
     networks:
-      - database_net
+      - medical-rag-net
+    restart: "no"
+
+  # ========== FastAPI 应用服务 ==========
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medical-rag-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - QDRANT_HOST=qdrant
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
+    volumes:
+      - app_data:/app/data
+    networks:
+      - medical-rag-net
+
+# ========== 命名卷（由 Docker 管理，不绑定项目目录） ==========
+volumes:
+  pg_data:
+  qdrant_data:
+  redis_data:
+  app_data:
 
 networks:
-  database_net:
+  medical-rag-net:
     driver: bridge
