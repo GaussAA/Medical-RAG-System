@@ -102,6 +102,12 @@ class VectorRetriever(BaseRetriever):
                 limit=top_k,
                 query_filter=search_filter,
                 score_threshold=self.similarity_threshold,
+                search_params={
+                    "quantization": {
+                        "ignore": False,
+                        "rescore": True,
+                    }
+                },
             ).points
 
             nodes = []

@@ -1,5 +1,9 @@
 """
-Qdrant collection initialization script
+Qdrant collection initialization script — v1.18 features enabled.
+
+Features used:
+- TurboQuant 4-bit: 8x vector compression without recall loss
+- ScalarQuant + ProductQuant as fallback options (see config)
 
 Usage:
     uv run python scripts/init_qdrant.py
@@ -11,13 +15,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import (
+    Distance,
+    TurboQuantBitSize,
+    TurboQuantQuantizationConfig,
+    TurboQuantization,
+    VectorParams,
+)
 
 from src.common.config.settings import get_settings
 
 
 def init_qdrant():
-    """Create Qdrant collection with proper vector configuration"""
+    """Create Qdrant collection with TurboQuant for optimal storage/performance."""
     settings = get_settings()
     qdrant_config = settings.database.qdrant
 
@@ -43,24 +53,35 @@ def init_qdrant():
 
     # Get embedding dimension from settings
     embedding_dim = settings.models.embedding.dimension
-    print(f"[*] Creating collection '{collection_name}' with vector dimension {embedding_dim}...")
+    print(f"[*] Creating collection '{collection_name}' (dim={embedding_dim})...")
 
+    # ── TurboQuant 4-bit: 8x compression, near-zero recall loss ──
     client.create_collection(
         collection_name=collection_name,
         vectors_config={
             "": VectorParams(
                 size=embedding_dim,
                 distance=Distance.COSINE,
-            )
+            ),
         },
+        quantization_config=TurboQuantization(
+            turbo=TurboQuantQuantizationConfig(
+                always_ram=True,            # 量化向量常驻 RAM 加速搜索
+                bits=TurboQuantBitSize.BITS4,  # 4-bit → 8x 压缩
+            ),
+        ),
     )
-    print(f"    [+] Collection '{collection_name}' created successfully!")
+    print(f"    [+] Collection created (TurboQuant 4-bit, 8x compression)")
 
     # Verify
     collections = client.get_collections().collections
     collection_names = [c.name for c in collections]
     if collection_name in collection_names:
-        print(f"\n[+] Qdrant collection '{collection_name}' is ready!")
+        info = client.get_collection(collection_name=collection_name)
+        print(f"\n[+] Collection '{collection_name}' is ready!")
+        print(f"    Status: {info.status}")
+        print(f"    Vectors count: {info.vectors_count}")
+        print(f"    Quantization: {info.config.quantization_config if info.config else 'N/A'}")
         return True
     else:
         print("\n[!] Failed to create collection")
