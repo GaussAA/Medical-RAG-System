@@ -59,16 +59,22 @@ class VectorRetriever(BaseRetriever):
 
     @property
     def embedding_model(self):
-        """Get embedding model, lazily loaded to configured device."""
+        """Get embedding model, lazily loaded to configured device.
+
+        Uses ONNX Runtime (``backend='onnx'``) for 2-5x faster CPU inference
+        via the sentence-transformers[onnx] 5.6.0 integration.
+        """
         if self._embedding_model is None:
             from sentence_transformers import SentenceTransformer
 
             settings = get_settings()
             embedding_model_name = settings.models.embedding.name
             device = settings.models.embedding.device
+
             self._embedding_model = SentenceTransformer(
                 embedding_model_name,
                 device=device,
+                backend="onnx",
                 model_kwargs={"torch_dtype": torch.float16},
             )
         return self._embedding_model
