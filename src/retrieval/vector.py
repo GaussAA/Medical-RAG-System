@@ -61,22 +61,36 @@ class VectorRetriever(BaseRetriever):
     def embedding_model(self):
         """Get embedding model, lazily loaded to configured device.
 
-        Uses ONNX Runtime (``backend='onnx'``) for 2-5x faster CPU inference
-        via the sentence-transformers[onnx] 5.6.0 integration.
+        Local-first strategy: tries local cache first; falls back to download.
+        Uses ONNX Runtime (``backend='onnx'``) for 2-5x faster CPU inference.
         """
         if self._embedding_model is None:
             from sentence_transformers import SentenceTransformer
+
+            from src.common.config import get_settings
 
             settings = get_settings()
             embedding_model_name = settings.models.embedding.name
             device = settings.models.embedding.device
 
-            self._embedding_model = SentenceTransformer(
-                embedding_model_name,
-                device=device,
-                backend="onnx",
-                model_kwargs={"torch_dtype": torch.float16},
-            )
+            # 本地优先：先尝试本地缓存，失败则联网下载
+            try:
+                self._embedding_model = SentenceTransformer(
+                    embedding_model_name,
+                    device=device,
+                    backend="onnx",
+                    local_files_only=True,
+                    model_kwargs={"torch_dtype": torch.float16},
+                )
+                logger.info(f"Embedding model loaded from local cache: {embedding_model_name}")
+            except OSError:
+                logger.info(f"Model not in local cache, downloading: {embedding_model_name}")
+                self._embedding_model = SentenceTransformer(
+                    embedding_model_name,
+                    device=device,
+                    backend="onnx",
+                    model_kwargs={"torch_dtype": torch.float16},
+                )
         return self._embedding_model
 
     def load_embedding_to_gpu(self) -> bool:

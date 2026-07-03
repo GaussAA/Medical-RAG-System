@@ -3,6 +3,7 @@
 from typing import Any
 
 import torch
+from loguru import logger
 
 from src.common.config import get_settings
 from src.common.models import RerankedNode, RetrievedNode
@@ -32,12 +33,24 @@ class Reranker:
         if self.model is None:
             from sentence_transformers import CrossEncoder
 
-            self.model = CrossEncoder(
-                self.model_name,
-                max_length=self.max_length,
-                device=self.device,
-                model_kwargs={"torch_dtype": torch.float16},
-            )
+            # 本地优先：先尝试本地缓存，失败则联网下载
+            try:
+                self.model = CrossEncoder(
+                    self.model_name,
+                    max_length=self.max_length,
+                    device=self.device,
+                    model_kwargs={"torch_dtype": torch.float16},
+                    local_files_only=True,
+                )
+                logger.info(f"Reranker model loaded from local cache: {self.model_name}")
+            except OSError:
+                logger.info(f"Reranker model not in local cache, downloading: {self.model_name}")
+                self.model = CrossEncoder(
+                    self.model_name,
+                    max_length=self.max_length,
+                    device=self.device,
+                    model_kwargs={"torch_dtype": torch.float16},
+                )
 
     def rerank(
         self,
